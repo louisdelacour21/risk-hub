@@ -1,0 +1,23 @@
+// Writes fixture_riskx11.json from riskx11.js to riskx14.js: inputs and the outputs engine/riskx11.py must reproduce.
+const fs = require('fs'), path = require('path'); require('../../riskx14.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const out = {};
+let s = 777; const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
+const nrm = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+out.kmvIn = [{ mu: 0.1, sigma: 0.8, T: 1, ratio: 1.5 }, { mu: 0.32, sigma: 0.8, T: 0.5, ratio: 1.2 }, { mu: 0, sigma: 0.6, T: 2, ratio: 1.8 }, { mu: 0.18, sigma: 0.6, T: 1, ratio: 2 }];
+out.kmv = out.kmvIn.map((o) => X.kmv(o));
+const lr = Array.from({ length: 600 }, () => 0.0004 + 0.03 * nrm()); out.lr = lr;
+out.emp = [X.empirical(lr, 30, 1.4), X.empirical(lr, 10, 1.2, 0.05)];
+out.mig = [X.migration(lr, 20, [0.4, 0.6, 0.75], 0.9), X.migration(lr, 10, [0.5, 0.7], 0.85, 0.1)];
+const close = [100]; for (let i = 0; i < 120; i++) close.push(close[i] * Math.exp(0.002 + 0.03 * nrm())); out.close = close;
+const lr2 = close.slice(1).map((c, i) => Math.log(c / close[i])); out.rv = X.rollVol(lr2, 10);
+const vol = out.rv.map((v) => v * (1 + 0.1 * (rnd() - 0.5))); out.vol = Array.from({ length: close.length }, (_, i) => vol[Math.min(i, vol.length - 1)]);
+out.opl = [X.optionPla(close, out.vol), X.optionPla(close, out.vol, { mny: 1.1, call: false, terms: ['delta', 'gamma', 'vega'] }), X.optionPla(close, out.vol, { terms: ['delta', 'gamma', 'vega', 'theta'], T: 0.2, r: 0.02 })];
+out.pla = out.opl.map((o) => X.pla(o.hpl, o.rtpl)); out.zones = [[0.9, 0.05], [0.75, 0.1], [0.6, 0.05], [0.9, 0.2]].map(([a, b]) => X.plaZone(a, b));
+out.cur = [[(S) => Math.max(S - 100, 0), 100, 0.5, 0.5], [(S) => S * S / 100, 100, 0.3, 1.0], [(S) => -Math.max(100 - S, 0), 90, 0.5, 0.3]].map(([f, S0, w, d]) => X.curvature(f, S0, w, d));
+out.wwr = [X.wwrCva({ paths: 400, steps: 6 }), X.wwrCva({ rho: 0.5, paths: 500, steps: 8, pos: 'fwdShort', seed: 5 }), X.wwrCva({ rho: 0.8, paths: 400, steps: 4, pos: 'fwdLong' })];
+const x = Array.from({ length: 300 }, () => nrm() * 0.04); out.x = x; out.exp = [0.5, 0.05, 0.95, 0.01].map((t) => X.expectile(x, t));
+const lo = x.map((v) => -v); out.lo = lo; out.ml = [X.matchLevel(lo, 0.05), X.matchLevel(lo, 0.1)];
+out.sp = [0.001, 1, 10, 50].map((k) => X.spectral(lo, k));
+out.conc = [X.concentration([5, 3, 2, 1]), X.concentration([1, 1, 1, 1]), X.concentration([-4, 10, 0, 3, 7])];
+fs.writeFileSync(path.join(__dirname, 'fixture_riskx11.json'), JSON.stringify(out, (k, v) => (typeof v === 'function' ? undefined : typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? '__nan__' : v > 0 ? '__inf__' : '__-inf__') : v)));
+console.log('fixture riskx11 ok');

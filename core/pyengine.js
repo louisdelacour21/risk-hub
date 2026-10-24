@@ -1,7 +1,7 @@
 /* Python engine in the browser: Pyodide (free, WebAssembly) runs the modules of engine/*.py; the JavaScript math stays as the fallback
    when Pyodide cannot load (offline, blocked CDN). Py.call('risk', 'kupiec', [250, 3, 0.01]) -> Promise of the JSON-able result. */
 (function () {
-  const VERSION = '0.26.4', FILES = ['risk.py', 'options.py', 'quant.py','econometrics.py','ml.py','analytics.py','riskx.py','riskx2.py','riskx3.py','riskx5.py','riskx6.py'];
+  const VERSION = '0.26.4', FILES = ['risk.py', 'options.py', 'quant.py','econometrics.py','ml.py','analytics.py','riskx.py','riskx2.py','riskx3.py','riskx5.py','riskx6.py','riskx7.py','riskx11.py','riskx15.py'];
   let boot = null;
   const load = () => boot ||= new Promise((ok, ko) => {
     const s = document.createElement('script'); s.src = `https://cdn.jsdelivr.net/pyodide/v${VERSION}/full/pyodide.js`;

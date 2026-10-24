@@ -1,0 +1,24 @@
+// Writes fixture_riskx7.json from riskx7.js to riskx10.js: inputs and the outputs engine/riskx7.py must reproduce.
+const fs = require('fs'), path = require('path'); require('../../riskx10.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const out = {};
+out.chi = [[0.5, 1], [3, 4], [20, 8], [5, 10], [30, 3], [0, 2], [12, 8.5]].map(([x, k]) => ({ x, k, v: X.chi2sf(x, k) }));
+out.bu = [[0, 10, 0.1], [3, 50, 0.04], [12, 200, 0.05], [1, 1, 0.5], [7, 20, 0.2]].map((a) => ({ a, v: X.binomUpper(...a) }));
+let s = 4242; const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
+const pd = Array.from({ length: 1000 }, () => 0.005 + 0.1 * rnd() * rnd()), y = pd.map((p) => (rnd() < p * 1.3 ? 1 : 0)); out.pd = pd; out.y = y;
+out.pb = [X.pdBacktest(pd, y), X.pdBacktest(pd, y, 5)];
+const cb = { S: 1.1, F: 1.12, T: 1, rE: 0.03, rU: 0.05, yU: 0.06 }; out.cb = cb; out.ccy = [X.ccyBasis(cb), X.ccyBasis({ ...cb, T: 0.5, F: 1.09 })]; out.fwd = X.fwdFromBasis({ S: 1.1, rU: 0.05, rE: 0.03, T: 1, basis: -0.004 });
+const nb = { z: 0.012, cds: 0.008, f: 0.003, haircut: 0.1, T: 5 }; out.nb = nb; out.nbr = [X.negBasis(nb), X.negBasis({ ...nb, cds: 0.015 })]; out.nbw = [0, 0.001, 0.01].map((d) => X.negBasis(nb).widen(d));
+const sc = [{ lam: 2, m: 1, q99: 8 }, { lam: 0.5, m: 5, q99: 40 }, { lam: 0.1, m: 20, q99: 100 }]; out.sc = sc;
+out.op = [X.opScenarios(sc, { rho: 0.3, sims: 3000 }), X.opScenarios(sc, { rho: 0.7, sims: 2000, seed: 2, q: 0.99 })];
+const eo = { pd: 0.02, lgd: 0.45, ead: 1000, T: 5, eir: 0.04 }; out.eo = eo;
+out.ecl = [X.ecl(eo), X.ecl({ ...eo, years: 1 }), X.ecl({ ...eo, mult: 3 }), X.ecl({ ...eo, mult: 60 })];
+const scn = [{ w: 0.5, mult: 1 }, { w: 0.3, mult: 2, lgdMult: 1.2 }, { w: 0.2, mult: 3.5, lgdMult: 1.5 }];
+out.scn = scn; out.ew = [1, 2, 3].map((st) => X.eclWeighted({ ...eo, stage: st, scenarios: scn }));
+const close = Array.from({ length: 200 }, (_, i) => 100 + 3 * Math.sin(i / 9) + (rnd() - 0.5) * 2); out.close = close;
+const high = close.map((c) => c * (1 + 0.01 * rnd())), low = close.map((c) => c * (1 - 0.01 * rnd())); out.high = high; out.low = low;
+const ret = close.slice(1).map((c, i) => c / close[i] - 1), vol = ret.map((_, i) => (i % 17 === 0 ? 0 : 1e7 * (1 + rnd()))); out.ret = ret; out.vol = vol;
+out.liq = { roll: X.roll(close), up: X.roll(close.map((c, i) => i)), am: X.amihud(ret, vol), cs: X.corwinSchultz(high, low), pk: X.parkinson(high, low) };
+const bk = [{ rw: 0.02, s: [100, -40, 60], rho: 0.5 }, { rw: 0.03, s: [-80, 30], rho: 0.3 }, { rw: 0.015, s: [10, 20, 30, -50], rho: 0.6 }]; out.bk = bk;
+out.sba = ['low', 'medium', 'high'].map((m) => X.sba(bk, 0.4, m)); out.sba0 = X.sba(bk, 0.4); out.sbm = [X.sbaMax(bk, 0.4), X.sbaMax(bk, 0.9)];
+fs.writeFileSync(path.join(__dirname, 'fixture_riskx7.json'), JSON.stringify(out, (k, v) => (typeof v === 'function' ? undefined : typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? '__nan__' : v > 0 ? '__inf__' : '__-inf__') : v)));
+console.log('fixture riskx7 ok');
