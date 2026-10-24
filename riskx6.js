@@ -9,24 +9,11 @@
   // Retail and corporate deposits leave as cap * (1 - exp(-t / tau)); wholesale funding rolls over at rate rr over its remaining life;
   // committed lines are drawn as draw * (1 - exp(-t / 30)); contractual loan inflows arrive at `inflow` of the book per day (stressed down by `inflowKeep`).
   // Buffer = cash + HQLA after haircut. Survival = first day the cumulative net outflow exceeds the buffer.
-  function survival(o) {
-    const H = o.horizon || 180, dep = o.deposits, days = Array.from({ length: H + 1 }, (_, t) => t), out = [], inn = [], net = [];
-    for (const t of days) {
-      let o1 = 0; for (const d of dep) o1 += d.amount * d.cap * (1 - Math.exp(-t / d.tau));
-      o1 += o.wholesale * (1 - o.rollover) * Math.min(1, t / o.wholesaleLife) + o.commit * o.draw * (1 - Math.exp(-t / 30));
-      const i1 = o.loans * o.inflow * o.inflowKeep * t;
-      out.push(o1); inn.push(i1); net.push(o1 - i1);
-    }
-    const buffer = o.cash + o.hqla * (1 - o.haircut), hit = net.findIndex((x) => x > buffer);
-    return { days, out, inn, net, buffer, survival: hit < 0 ? Infinity : hit };
-  }
+  
 
   // ---------- funding: maturity ladder ----------
   // gap_i = inflow_i - outflow_i * (1 - rollover_i) (the share of maturing liabilities that is refinanced reduces the outflow)
-  function ladder(inflow, outflow, rollover) {
-    const gap = inflow.map((x, i) => x - outflow[i] * (1 - (rollover[i] || 0))), cum = []; let s = 0; for (const g of gap) { s += g; cum.push(s); }
-    return { gap, cum, worst: Math.min(...cum) };
-  }
+  
 
   // ---------- funding: transfer pricing of an amortising loan ----------
   // Funding spread curve s(t) = base + liq * (1 - exp(-t / theta)). Slice k of N repaid at t_k = T k / N is funded for t_k years at s(t_k).
@@ -40,7 +27,7 @@
 
   // ---------- FX: hedged return of a foreign asset ----------
   // r = period FX return of the quote "foreign per home" (a rise hurts the home investor). Hedge ratio h; carry = per-period forward gain (negative = hedge cost).
-  const hedged = (r, h, carry) => r.map((x) => -(1 - h) * x + h * carry);
+  
 
   // ---------- parameter stability ----------
   // OLS y = a + b x with prefix sums, so any sub-sample is fitted in O(1).
@@ -67,11 +54,8 @@
     return { ...sc, supF: m, breakAt: sc.at[k], p: (ge + 1) / (B + 1), before: fitSeg(prefix(y, x), 0, sc.at[k]), after: fitSeg(prefix(y, x), sc.at[k], y.length) };
   }
   // OLS-CUSUM: W_t = (1 / (sigma sqrt n)) sum of residuals up to t; under stability sup|W| is Kolmogorov distributed (5% critical value 1.358).
-  function cusum(res) {
-    const n = res.length, sd = Math.sqrt(res.reduce((s, e) => s + e * e, 0) / (n - 2)) || 1, W = []; let s = 0; for (const e of res) { s += e; W.push(s / (sd * Math.sqrt(n))); }
-    return { W, sup: Math.max(...W.map(Math.abs)), crit: 1.358 };
-  }
+  
 
-  Object.assign(X, { survival, ladder, ftp, hedged, ols2, supF, cusum });
+  Object.assign(X, {   ftp,  ols2, supF, });
   if (typeof module !== 'undefined') module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

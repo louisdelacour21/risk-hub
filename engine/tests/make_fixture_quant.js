@@ -1,5 +1,5 @@
 // Writes fixture_quant.json from the JavaScript: inputs and the outputs engine/quant.py and options.py must reproduce.
-const fs = require('fs'), path = require('path'), R = require('../../quant.js');
+const fs = require('fs'), path = require('path'), R = require('../../reference_js/quant.js');
 const out = {}, r = R.simulate(800), L = r.map((x) => -x);
 const rg = R.rng(5); out.rng = { u: Array.from({ length: 8 }, () => rg.u()), n: Array.from({ length: 8 }, () => rg.n()) };
 out.nm = R.nelderMead(([x, y]) => (1 - x) ** 2 + 100 * (y - x * x) ** 2, [-1, 1], 0.3, 500);

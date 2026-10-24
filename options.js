@@ -35,30 +35,14 @@
   }
 
   /** Implied volatility by bisection (robust: the price is increasing in volatility). Returns null when the price is outside the no-arbitrage bounds. */
-  function impliedVol(price, S, K, T, r, q, type) {
-    const eq = Math.exp(-q * T), er = Math.exp(-r * T);
-    const lo = type === 'C' ? Math.max(S * eq - K * er, 0) : Math.max(K * er - S * eq, 0), hi = type === 'C' ? S * eq : K * er;
-    if (!(price > lo + 1e-12) || !(price < hi - 1e-12) || T <= 0) return null;
-    let a = 1e-6, b = 5;
-    if (bs(S, K, T, b, r, q, type).price < price) return null;
-    for (let i = 0; i < 200; i++) { const m = (a + b) / 2; (bs(S, K, T, m, r, q, type).price < price ? (a = m) : (b = m)); if (b - a < 1e-12) break; }
-    return (a + b) / 2;
-  }
+  
 
   /** Linear interpolation of implied vol in log-moneyness (flat beyond the quoted strikes). pts: [{k, iv}] sorted by k. */
-  function ivAt(pts, k) {
-    if (!pts.length) return null;
-    if (k <= pts[0].k) return pts[0].iv;
-    for (let i = 1; i < pts.length; i++) if (k <= pts[i].k) { const a = pts[i - 1], b = pts[i], w = (Math.log(k) - Math.log(a.k)) / (Math.log(b.k) - Math.log(a.k)); return a.iv + w * (b.iv - a.iv); }
-    return pts[pts.length - 1].iv;
-  }
+  
 
   // Full revaluation after a shock: spot moves by dS (relative), volatility by dv (absolute, 0.05 = 5 vol points), dDays days pass. The greeks give first- and second-order estimates.
-  function optionScenario(S, K, T, v, r, q, type, dS, dv, dDays) {
-    const b = bs(S, K, T, v, r, q, type), S1 = S * (1 + dS), T1 = Math.max(T - dDays / 365, 0), v1 = Math.max(v + dv, 1e-4), a = bs(S1, K, T1, v1, r, q, type), x = S1 - S;
-    return { base: b.price, after: a.price, pnl: a.price - b.price, delta: b.delta * x, deltaGamma: b.delta * x + 0.5 * b.gamma * x * x, deltaGammaTheta: b.delta * x + 0.5 * b.gamma * x * x + b.theta * (T - T1) };
-  }
+  
 
-  Object.assign(Risk, { bs, impliedVol, ivAt, optionScenario });
+  Object.assign(Risk, { bs,   });
   if (typeof module !== 'undefined' && module.exports) module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

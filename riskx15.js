@@ -72,20 +72,9 @@
   }
 
   // Average pairwise correlation of the columns of R (array of equal-length series), over the whole sample, optionally on the days listed in `idx`.
-  function avgCorr(R, idx) {
-    const k = R.length, rows = idx || R[0].map((_, t) => t); let s = 0, m = 0;
-    const cols = R.map((r) => rows.map((t) => r[t]));
-    for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) { const mi = Risk.mean(cols[i]), mj = Risk.mean(cols[j]); let a = 0, b = 0, c = 0; for (let t = 0; t < rows.length; t++) { const p = cols[i][t] - mi, q = cols[j][t] - mj; a += p * q; b += p * p; c += q * q; } s += a / Math.sqrt(b * c); m++; }
-    return s / m;
-  }
+  
   // Correlation stability: rolling average correlation (window w, step), and the same on the worst `frac` days of the equal-weight basket against the other days.
-  function corrStability(R, w, frac) {
-    const n = R[0].length, roll = [], at = [];
-    for (let e = w; e <= n; e += 5) { const idx = Array.from({ length: w }, (_, j) => e - w + j); roll.push(avgCorr(R, idx)); at.push(e); }
-    const bs = R[0].map((_, t) => R.reduce((s, r) => s + r[t], 0) / R.length), order = bs.map((_, t) => t).sort((a, b) => bs[a] - bs[b]), m = Math.max(5, Math.round(frac * n));
-    const worst = order.slice(0, m), rest = order.slice(m);
-    return { all: avgCorr(R), worst: avgCorr(R, worst), rest: avgCorr(R, rest), roll, at, m };
-  }
-  Object.assign(X, { pseudo, tCdf, tInv, fitCopulas, avgCorr, corrStability, lgamma: lgam });
+  
+  Object.assign(X, { pseudo, tCdf, tInv, fitCopulas,   lgamma: lgam });
   if (typeof module !== 'undefined') module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

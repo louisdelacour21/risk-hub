@@ -1,5 +1,5 @@
 // Writes fixture_riskx2.json from the JavaScript: inputs and the outputs engine/riskx2.py must reproduce.
-const fs = require('fs'), path = require('path'), Risk = require('../../riskx2.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'), Risk = require('../../reference_js/riskx2.js'), X = Risk.x;
 const out = {};
 out.bs = [X.bs(100, 95, 1, 0.03, 0.2), X.bs(100, 95, 1, 0.03, 0.2, false), X.bs(100, 100, 0.5, 0.01, 0)];
 out.iv = X.impVol(X.bs(100, 105, 0.7, 0.02, 0.27), 100, 105, 0.7, 0.02);

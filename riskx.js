@@ -74,65 +74,31 @@
 
   // ---------- FRTB expected shortfall with liquidity horizons ----------
   const LHS = [10, 20, 40, 60, 120];
-  function frtbEs(rets, w, lh, conf = 0.975) {                           // rets[i] = daily returns of risk factor i; lh[i] = its liquidity horizon (days)
-    const n = Math.min(...rets.map((r) => r.length)), es = LHS.map((h) => {
-      const pr = Array.from({ length: n }, (_, t) => rets.reduce((s, r, i) => s + (lh[i] >= h ? w[i] * r[r.length - n + t] : 0), 0));
-      return Risk.historical(pr, conf).es * Math.sqrt(10);                // 10-day base horizon, square-root scaling of the daily ES
-    });
-    let s = es[0] ** 2; for (let j = 1; j < LHS.length; j++) s += (es[j] * Math.sqrt((LHS[j] - LHS[j - 1]) / 10)) ** 2;
-    return { es, total: Math.sqrt(s), base: es[0] };
-  }
+  
 
   // ---------- liquidity regulation ----------
   const LCR_OUT = [['retail_stable', 'Retail deposits, stable', 0.05], ['retail_less', 'Retail deposits, less stable', 0.10], ['corp_op', 'Corporate deposits, operational', 0.25], ['corp_non', 'Corporate deposits, non-operational', 0.40], ['fin', 'Financial-institution deposits', 1.00], ['lines', 'Undrawn committed credit lines', 0.10], ['secured', 'Secured funding maturing in 30 days', 0.25]];
   const LCR_IN = [['loans', 'Performing loans maturing in 30 days', 0.50], ['reverse', 'Reverse repos, unencumbered', 1.00]];
-  function lcr(hqla, outs, ins, stress = 1) {                            // hqla = {l1, l2a, l2b}; outs/ins = {key: amount}; stress multiplies the run-off rates (capped at 100%)
-    const l2a = hqla.l2a * 0.85, l2b = hqla.l2b * 0.75, l2cap = hqla.l1 * (2 / 3), stock = hqla.l1 + Math.min(l2a + l2b, l2cap);
-    const out = LCR_OUT.reduce((s, [k, , rt]) => s + (outs[k] || 0) * Math.min(1, rt * stress), 0), inflow = LCR_IN.reduce((s, [k, , rt]) => s + (ins[k] || 0) * rt, 0), net = out - Math.min(inflow, 0.75 * out);
-    return { stock, out, inflow: Math.min(inflow, 0.75 * out), net, ratio: net > 0 ? stock / net : Infinity, l2capBinding: l2a + l2b > hqla.l1 * (2 / 3), l2cap };
-  }
+  
   const NSFR_ASF = [['cap', 'Regulatory capital', 1.00], ['ret_stable', 'Retail deposits, stable', 0.95], ['ret_less', 'Retail deposits, less stable', 0.90], ['wh_op', 'Operational and corporate deposits', 0.50], ['wh_st', 'Wholesale funding under 6 months', 0.00], ['lt', 'Funding over 1 year', 1.00]];
   const NSFR_RSF = [['hq1', 'Level 1 assets', 0.05], ['hq2', 'Level 2 assets', 0.15], ['mort', 'Residential mortgages', 0.65], ['corp', 'Corporate loans', 0.85], ['other', 'Other assets, equities, fixed assets', 1.00], ['off', 'Off-balance sheet commitments', 0.05]];
-  const nsfr = (asf, rsf) => { const A = NSFR_ASF.reduce((s, [k, , f]) => s + (asf[k] || 0) * f, 0), Rr = NSFR_RSF.reduce((s, [k, , f]) => s + (rsf[k] || 0) * f, 0); return { asf: A, rsf: Rr, ratio: Rr > 0 ? A / Rr : Infinity }; };
+  
 
   // ---------- reverse stress test ----------
-  function reverseStress(cov, w, L) {                                    // the most plausible (smallest Mahalanobis distance) factor move producing a portfolio loss of L
-    const sw = cov.map((row) => row.reduce((s, c, j) => s + c * w[j], 0)), q = w.reduce((s, x, i) => s + x * sw[i], 0);
-    return { shock: sw.map((x) => -L * x / q), sigma: Math.sqrt(q), dist: L / Math.sqrt(q), prob: N(-L / Math.sqrt(q)) };
-  }
+  
 
   // ---------- hierarchical risk parity, min-variance, max-diversification ----------
-  function hrp(cov) {
-    const n = cov.length, sd = cov.map((r, i) => Math.sqrt(r[i])), dist = cov.map((r, i) => r.map((c, j) => Math.sqrt(Math.max(0, (1 - c / (sd[i] * sd[j])) / 2))));
-    let cl = Array.from({ length: n }, (_, i) => [i]);
-    while (cl.length > 1) { let bi = 0, bj = 1, bd = Infinity; for (let i = 0; i < cl.length; i++) for (let j = i + 1; j < cl.length; j++) { let d = Infinity; for (const a of cl[i]) for (const b of cl[j]) d = Math.min(d, dist[a][b]); if (d < bd) { bd = d; bi = i; bj = j; } } cl = cl.filter((_, k) => k !== bi && k !== bj).concat([cl[bi].concat(cl[bj])]); }
-    const order = cl[0], w = Array(n).fill(1), cv = (c) => { const iv = c.map((i) => 1 / cov[i][i]), s = iv.reduce((a, b) => a + b, 0), x = iv.map((v) => v / s); return x.reduce((t, xi, a) => t + xi * x.reduce((u, xj, b) => u + xj * cov[c[a]][c[b]], 0), 0); };
-    const st = [order]; while (st.length) { const c = st.pop(); if (c.length < 2) continue; const h = c.length >> 1, L = c.slice(0, h), Rr = c.slice(h), vL = cv(L), vR = cv(Rr), al = 1 - vL / (vL + vR); L.forEach((i) => (w[i] *= al)); Rr.forEach((i) => (w[i] *= 1 - al)); st.push(L, Rr); }
-    return { w, order };
-  }
-  function longOnly(cov, target) {                                       // minimum variance (target = ones) or maximum diversification (target = vols), long-only by dropping negative weights
-    let act = cov.map((_, i) => i);
-    for (;;) { const S = act.map((i) => act.map((j) => cov[i][j])), x = Risk.solve(S, act.map((i) => target[i])), s = x.reduce((a, b) => a + b, 0), w = x.map((v) => v / s), neg = w.findIndex((v) => v < -1e-12); if (neg < 0 || act.length === 1) { const out = Array(cov.length).fill(0); act.forEach((i, k) => (out[i] = Math.max(0, w[k]))); return out; } act = act.filter((_, k) => k !== neg); }
-  }
+  
+  
 
   // ---------- Basel IRB capital and IFRS 9 ----------
-  function irbRw(pd, lgd, m, kind = 'corp') {
-    pd = Math.max(pd, 0.0003); let rho, adj = 1;
-    if (kind === 'mortgage') rho = 0.15; else if (kind === 'qrre') rho = 0.04;
-    else if (kind === 'retail') { const f = (1 - Math.exp(-35 * pd)) / (1 - Math.exp(-35)); rho = 0.03 * f + 0.16 * (1 - f); } else rho = Risk.irbRho(pd);
-    const b = (0.11852 - 0.05478 * Math.log(pd)) ** 2; if (kind === 'corp') adj = (1 + (m - 2.5) * b) / (1 - 1.5 * b);
-    const k = Risk.irbK(pd, lgd, rho) * adj; return { rho, k, rw: k * 12.5 * 1.06 };
-  }
+  
   const RATINGS = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'D'];
   const TRANS = [[90.81, 8.33, 0.68, 0.06, 0.12, 0, 0, 0], [0.70, 90.65, 7.79, 0.64, 0.06, 0.14, 0.02, 0], [0.09, 2.27, 91.05, 5.52, 0.74, 0.26, 0.01, 0.06], [0.02, 0.33, 5.95, 86.93, 5.30, 1.17, 0.12, 0.18], [0.03, 0.14, 0.67, 7.73, 80.53, 8.84, 1.00, 1.06], [0, 0.11, 0.24, 0.43, 6.48, 83.46, 4.07, 5.20], [0.22, 0, 0.22, 1.30, 2.38, 11.24, 64.86, 19.79], [0, 0, 0, 0, 0, 0, 0, 100]].map((r) => { const s = r.reduce((a, b) => a + b, 0); return r.map((x) => x / s); });
-  const matMul = (A, B) => A.map((r) => B[0].map((_, j) => r.reduce((s, x, k) => s + x * B[k][j], 0)));
-  function cumPd(Pm, years) { let M = Pm.map((r, i) => r.map((_, j) => (i === j ? 1 : 0))); const out = []; for (let y = 1; y <= years; y++) { M = matMul(M, Pm); out.push(M.map((r) => r[r.length - 1])); } return out; }   // out[y-1][i] = P(default within y years | start rating i)
-  function ecl(pdCum, lgd, ead, r, stage) {                              // pdCum[y-1] = cumulative PD at year y; stage 1 = 12 months, 2/3 = lifetime (stage 3: PD = 1)
-    if (stage === 3) return lgd * ead;
-    const yrs = stage === 1 ? 1 : pdCum.length; let s = 0; for (let y = 1; y <= yrs; y++) s += ((pdCum[y - 1] - (y > 1 ? pdCum[y - 2] : 0)) * lgd * ead) / Math.pow(1 + r, y - 0.5);
-    return s;
-  }
+  
+     // out[y-1][i] = P(default within y years | start rating i)
+  
 
-  Object.assign(Risk, { x: { poisson, gammaDraw, lda, mertonEq, merton, vasBond, swapXva, frtbEs, LHS, lcr, nsfr, LCR_OUT, LCR_IN, NSFR_ASF, NSFR_RSF, reverseStress, hrp, longOnly, irbRw, RATINGS, TRANS, cumPd, eclCum: ecl, matMul } });
+  Object.assign(Risk, { x: { poisson, gammaDraw, lda, mertonEq, merton, vasBond, swapXva,  LHS,   LCR_OUT, LCR_IN, NSFR_ASF, NSFR_RSF,     RATINGS, TRANS,   } });
   if (typeof module !== 'undefined' && module.exports) module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,5 +1,5 @@
 // Writes fixture_ml.json from the JavaScript: inputs and the outputs engine/ml.py must reproduce.
-const fs = require('fs'), path = require('path'), R = require('../../ml.js'), M = R.ml;
+const fs = require('fs'), path = require('path'), R = require('../../reference_js/ml.js'), M = R.ml;
 const out = {}, r = R.simulate(500);
 const n = 300, X = Array.from({ length: n }, (_, i) => [r[i] * 50, Math.sin(i / 9), r[i + 1] * 30 + Math.cos(i / 4), (i % 7) - 3]);
 const yc = X.map((x, i) => x[0] * 0.8 - x[1] * 0.5 + 0.2 * x[2] + 0.3 * Math.sin(i * 1.7)), ym = yc.reduce((a, b) => a + b, 0) / n, y = yc.map((v) => v - ym);

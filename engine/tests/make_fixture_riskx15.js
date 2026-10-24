@@ -1,5 +1,5 @@
 // Writes fixture_riskx15.json from riskx15.js to riskx21.js: inputs and the outputs engine/riskx15.py must reproduce.
-const fs = require('fs'), path = require('path'); for (const k of [15, 16, 17, 18, 19, 20, 21]) require('../../riskx' + k + '.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'); for (const k of [15, 16, 17, 18, 19, 20, 21]) require('../../reference_js/riskx' + k + '.js'); const Risk = require('../../reference_js/riskx.js'), X = Risk.x;
 const out = {};
 let s = 99; const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
 const nrm = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());

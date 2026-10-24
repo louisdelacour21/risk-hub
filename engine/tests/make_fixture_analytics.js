@@ -1,5 +1,5 @@
 // Writes fixture_analytics.json from the JavaScript: inputs and the outputs engine/analytics.py must reproduce.
-const fs = require('fs'), path = require('path'), R = require('../../analytics.js');
+const fs = require('fs'), path = require('path'), R = require('../../reference_js/analytics.js');
 const out = {}, r = R.simulate(500);
 out.r = r; out.dd = R.drawdown(r); out.ww = R.worstWindows(r, 5); out.rv = R.rollingVol(r, 20); out.jb = R.jarqueBera(r); out.hist = R.histogram(r, 40); out.prof = R.profile(r);
 const dates = Array.from({ length: 300 }, (_, i) => new Date(Date.UTC(2020, 0, 1) + i * 86400000 * (i % 5 === 4 ? 3 : 1)).toISOString().slice(0, 10));

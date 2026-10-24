@@ -48,16 +48,22 @@ document.addEventListener('input', (e) => {
   S.weights[w] = Number(e.target.value); pref.set('weights', S.weights);
 });
 addEventListener('hashchange', route);
+addEventListener('pyready', () => {   // the Python engine is in: show it and redraw the screen on Python
+  const n = document.querySelector('header.top nav'); if (n && !$('#pybadge')) n.insertAdjacentHTML('afterbegin', `<span id="pybadge" class="tag" title="${Py.active()} functions now run as Python in your browser (Pyodide); the JavaScript math is the fallback">Python active</span>`);
+  if (S.assets.length) route();
+});
 addEventListener('themechange', () => { if (S.assets.length) route(); });   // canvases read their colours at draw time
 addEventListener('resize', () => { clearTimeout(S.rz); S.rz = setTimeout(() => { const h = location.hash || '#/'; if (h === '#/' || h.startsWith('#/run') || h.startsWith('#/rates') || h.startsWith('#/options') || h.startsWith('#/m/')) route(); }, 250); });
 
 (async function boot() {
-  $('#app').innerHTML = '<div class="running"><span class="spin"></span><p>Loading market data…</p></div>';
+  $('#app').innerHTML = '<div class="running"><span class="spin"></span><p>Starting Python…</p></div>';
+  const ok = await Py.ready;   // the maths is Python: nothing is drawn or simulated before it is in
   let bundled = { updated: '', series: [] }, user = [];
   try { bundled = await Data.loadBundled(); } catch { /* opened without a web server: the bundled series are missing, the user's own series still work */ }
   try { user = (await Data.store.list()).map((u) => ({ ...u, kind: 'user' })); } catch { /* storage unavailable */ }
   S.bundledUpdated = bundled.updated;
   S.assets = [...bundled.series, ...user, ...Data.simulated()];
   S.sel = S.sel.filter((id) => byId(id));
+  if (!ok) $('#app').insertAdjacentHTML('afterbegin', '<p class="tag">Python could not start (offline?). Only the heavy functions, which stay JavaScript, will work.</p>');
   route();
 })();

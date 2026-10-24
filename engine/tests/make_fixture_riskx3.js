@@ -1,5 +1,5 @@
 // Writes fixture_riskx3.json from the JavaScript (riskx3.js + riskx4.js): inputs and the outputs engine/riskx3.py must reproduce.
-const fs = require('fs'), path = require('path'), Risk = require('../../riskx4.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'), Risk = require('../../reference_js/riskx4.js'), X = Risk.x;
 let s = 12345; const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
 const nrm = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
 const out = {};

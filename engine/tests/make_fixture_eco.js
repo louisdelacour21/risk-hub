@@ -1,5 +1,5 @@
 // Writes fixture_eco.json from the JavaScript: inputs and the outputs engine/econometrics.py must reproduce.
-const fs = require('fs'), path = require('path'), R = require('../../econometrics.js'), E = R.eco;
+const fs = require('fs'), path = require('path'), R = require('../../reference_js/econometrics.js'), E = R.eco;
 const out = {}, r = R.simulate(600);
 const b = r.map((x, i) => 0.5 * x + 0.3 * Math.sin(i / 7) * 0.01);
 const walk = []; let s = 0; r.forEach((x) => { s += x * 10; walk.push(s); });

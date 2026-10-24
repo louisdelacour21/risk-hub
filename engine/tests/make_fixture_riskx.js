@@ -1,5 +1,5 @@
 // Writes fixture_riskx.json from the JavaScript: inputs and the outputs engine/riskx.py must reproduce.
-const fs = require('fs'), path = require('path'), Risk = require('../../riskx.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'), Risk = require('../../reference_js/riskx.js'), X = Risk.x;
 const out = {};
 const l1 = X.lda({ mu: 9, sigma: 1.6, lam: 12, n: 4000, seed: 5 }), l2 = X.lda({ mu: 9, sigma: 1.6, lam: 40, n: 3000, seed: 9, disp: 2, xi: 0.4, q: 0.85 });
 const ld = (l) => ({ mean: l.mean, meanSev: l.meanSev, countMean: l.countMean, sorted: Array.from(l.sorted), v: [0.5, 0.99, 0.999].map((p) => l.var(p)), es: [0.9, 0.99].map((p) => l.es(p)), sla: l.sla ? [0.99, 0.999].map((p) => l.sla(p)) : null });

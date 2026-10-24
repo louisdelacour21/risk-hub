@@ -293,3 +293,5 @@ a.catcard:hover { border-color: var(--accent); transform: translateY(-2px); }
 #pydlg #pyout.wait { color: var(--muted); }
 #pydlg #pyout.bad { border-color: #c0392b; }
 #pydlg small { color: var(--muted); }
+
+#pybadge{font-size:12px;padding:2px 8px;border:1px solid currentColor;border-radius:999px;opacity:.75;margin-right:12px;white-space:nowrap}

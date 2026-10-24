@@ -4,11 +4,7 @@
 ((G) => {
   const Risk = G.Risk || require('./riskx.js'); const X = Risk.x;
   // EWMA filter on log returns: sig[t] is the volatility forecast for day t made before seeing r[t]; z[t] = r[t] / sig[t]; next = forecast for the day after the sample.
-  function ewmaFilter(r, lambda = 0.94) {
-    let v = r.slice(0, 30).reduce((s, x) => s + x * x, 0) / 30; const sig = [], z = [];
-    for (let t = 0; t < r.length; t++) { sig.push(Math.sqrt(v)); z.push(r[t] / Math.sqrt(v)); v = lambda * v + (1 - lambda) * r[t] * r[t]; }
-    return { sig, z, next: Math.sqrt(v) };
-  }
+  
   // h-day cumulative log-return of N bootstrapped paths started from daily volatility sig0; returns the sorted losses (positive = loss).
   function fhsPaths(z, sig0, h, N, seed, lambda = 0.94) {
     const R = Risk.rng(seed), n = z.length, out = new Array(N);
@@ -21,6 +17,6 @@
   }
   const q = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)];
   const es = (sorted, p) => { const k = Math.max(1, Math.ceil(sorted.length * (1 - p))), t = sorted.slice(-k); return t.reduce((s, x) => s + x, 0) / k; };
-  Object.assign(X, { ewmaFilter, fhsPaths, qtile: q, esSorted: es });
+  Object.assign(X, {  fhsPaths, qtile: q, esSorted: es });
   if (typeof module !== 'undefined') module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

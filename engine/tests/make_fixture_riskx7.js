@@ -1,5 +1,5 @@
 // Writes fixture_riskx7.json from riskx7.js to riskx10.js: inputs and the outputs engine/riskx7.py must reproduce.
-const fs = require('fs'), path = require('path'); require('../../riskx10.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'); require('../../reference_js/riskx10.js'); const Risk = require('../../reference_js/riskx.js'), X = Risk.x;
 const out = {};
 out.chi = [[0.5, 1], [3, 4], [20, 8], [5, 10], [30, 3], [0, 2], [12, 8.5]].map(([x, k]) => ({ x, k, v: X.chi2sf(x, k) }));
 out.bu = [[0, 10, 0.1], [3, 50, 0.04], [12, 200, 0.05], [1, 1, 0.5], [7, 20, 0.2]].map((a) => ({ a, v: X.binomUpper(...a) }));

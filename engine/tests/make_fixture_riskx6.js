@@ -1,5 +1,5 @@
 // Writes fixture_riskx6.json from riskx6.js: inputs and the outputs engine/riskx6.py must reproduce.
-const fs = require('fs'), path = require('path'); require('../../riskx6.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'); require('../../reference_js/riskx6.js'); const Risk = require('../../reference_js/riskx.js'), X = Risk.x;
 const out = {};
 const so = { horizon: 90, deposits: [{ amount: 500, cap: 0.3, tau: 10 }, { amount: 300, cap: 0.5, tau: 20 }], wholesale: 200, rollover: 0.4, wholesaleLife: 60, commit: 100, draw: 0.3, loans: 900, inflow: 0.001, inflowKeep: 0.6, cash: 40, hqla: 150, haircut: 0.15 };
 out.so = so; out.sv = [X.survival(so), X.survival({ ...so, cash: 1000 }), X.survival({ ...so, horizon: 0, hqla: 0, cash: 0 })];

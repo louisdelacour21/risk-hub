@@ -1,5 +1,5 @@
 // Writes fixture_riskx5.json from riskx5.js: inputs and the outputs engine/riskx5.py must reproduce.
-const fs = require('fs'), path = require('path'); require('../../riskx5.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const fs = require('fs'), path = require('path'); require('../../reference_js/riskx5.js'); const Risk = require('../../reference_js/riskx.js'), X = Risk.x;
 const out = {};
 out.shor = [{ pPhys: 1e-3 }, { pPhys: 1e-3, bits: 384, gain: 4, cycleUs: 0.5 }, { pPhys: 0.02 }, { pPhys: 5e-4, failBudget: 0.01 }].map((o) => ({ o, r: X.shorEcc(o) }));
 out.qd = [X.qdayYear(2e7, 1e3, 2025, 1.5), X.qdayYear(2e7, 1e3, 2025, 1), X.qdayYear(10, 1e3, 2025, 2), X.qdayProb(10, 15, 0.4), X.qdayProb(0, 15, 0.4), X.mosca(5, 8, 15, 0.4)];
