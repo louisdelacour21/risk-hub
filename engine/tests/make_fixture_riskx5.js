@@ -1,0 +1,26 @@
+// Writes fixture_riskx5.json from riskx5.js: inputs and the outputs engine/riskx5.py must reproduce.
+const fs = require('fs'), path = require('path'); require('../../riskx5.js'); const Risk = require('../../riskx.js'), X = Risk.x;
+const out = {};
+out.shor = [{ pPhys: 1e-3 }, { pPhys: 1e-3, bits: 384, gain: 4, cycleUs: 0.5 }, { pPhys: 0.02 }, { pPhys: 5e-4, failBudget: 0.01 }].map((o) => ({ o, r: X.shorEcc(o) }));
+out.qd = [X.qdayYear(2e7, 1e3, 2025, 1.5), X.qdayYear(2e7, 1e3, 2025, 1), X.qdayYear(10, 1e3, 2025, 2), X.qdayProb(10, 15, 0.4), X.qdayProb(0, 15, 0.4), X.mosca(5, 8, 15, 0.4)];
+let s = 777; const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296; const nrm = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+const r = Array.from({ length: 250 }, () => 0.011 * nrm()); out.r = r;
+out.wt = [X.weightedTail([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], new Array(10).fill(0.1), 0.9), X.weightedTail(r.map((x) => -x), r.map(() => 1 / 250), 0.99)];
+out.jm = [X.jumpMixture(r, 0.05, 0.3, 0.99), X.jumpMixture(r, 0, 0.3, 0.975)];
+const R2 = [r, r.map((x, i) => 0.7 * x + 0.005 * nrm()), r.map((x) => 0.4 * x + 0.008 * nrm())]; out.R2 = R2;
+out.bw = [X.bootWindows(R2, 30, 20, 5, 7, true), X.bootWindows(R2, 17, 10, 4, 3, false)];
+out.tb = [X.tailBeta(R2[0], R2[1], 0.05), X.tailBeta(R2[0], R2[2], 0.01)];
+const P = X.population({ base0: 0.3, base1: 0.2, bias: -0.3, n: 4000 }); out.P = P; out.pop2 = X.population({ base0: 0.3, base1: 0.2, seed: 8, n: 500, share: 0.5, sep: 1 });
+const thr = [0.8, 0.8]; out.gs = X.groupStats(P, thr); out.fa = X.fairness(P, thr);
+out.th = [X.thresholdFor(P, 1, 0.3, 'sel'), X.thresholdFor(P, 0, 0.6, 'tpr')];
+out.px = X.proxy({ rho: 0.6, bx: 1, bz: 0.5, noise: 1, n: 1500 });
+const a = r.slice(0, 120), b = r.slice(120, 240).map((x) => x * 1.5 + 0.002); out.a = a; out.b = b;
+out.psi = [X.psi(a, b), X.psi(a, b, 5), X.psi(a, a)]; out.ks = [X.ks2(a, b), X.ks2(a, a)]; out.rd = X.rollingDrift(r, 80, 40, 20);
+const ap = X.applicants({ n: 600 }); out.ap = ap; out.ap2 = X.applicants({ n: 100, rho: 0.2, seed: 4 });
+const W = [-0.8, 0.9, 0.6, -0.5, 0]; global.pfW = (x) => 1 / (1 + Math.exp(-(-1.5 + W.reduce((t, c, j) => t + c * x[j], 0)))); out.W = W;
+out.auc = X.aucOf(ap.X.map(pfW), ap.y); out.pi = X.permImportance(pfW, ap.X, ap.y, 3, 3);
+out.sh = X.shapley(pfW, ap.X[0], ap.X.slice(1, 41));
+const models = [{ exposure: 100, cx: 1, age: 0 }, { exposure: 50, cx: 2, age: 3 }, { exposure: 10, cx: 3, age: 1 }]; out.models = models;
+out.mr = [X.modelRisk(models, { s0: 0.05, rho: 0.3, n: 5000 }), X.modelRisk(models, { s0: 0.05, rho: 0.6, q: 0.975, seed: 2, n: 2000 })];
+fs.writeFileSync(path.join(__dirname, 'fixture_riskx5.json'), JSON.stringify(out, (k, v) => (typeof v === 'function' ? undefined : typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? '__nan__' : v > 0 ? '__inf__' : '__-inf__') : v)));
+console.log('fixture riskx5 ok');
