@@ -7,3 +7,7 @@ A browser lab for market-risk and quant methods (VaR/ES, GARCH, copulas, options
 - Rates and FX: ECB, US Treasury, NY Fed.
 
 Not investment advice.
+
+## Python code
+
+Every module has a standalone Python script in [`python/`](python/INDEX.md) (also behind the "Python" button in the app).
