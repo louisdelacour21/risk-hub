@@ -268,7 +268,7 @@ print("annualised vol, first and last forecast day:", vol[0] * np.sqrt(252), vol
   };
 
   // ---- UI ----
-  const key = () => { const h = location.hash; let m = h.match(/^#\/m\/([a-z0-9_]+)/); if (m) return m[1]; m = h.match(/^#\/run\/([a-z0-9_]+)/); if (m) return 'run/' + m[1]; return /^#\/options/.test(h) ? 'options' : null; };
+  const key = () => { const h = location.hash; let m = h.match(/^#\/m\/([a-z0-9_]+)/); if (m) return m[1]; m = h.match(/^#\/run\/([a-z0-9_]+)/); if (m) return 'run/' + m[1]; return /^#\/options/.test(h) ? 'options' : /^#\/?$/.test(h) ? 'portfolio' : /^#\/data/.test(h) ? 'market' : /^#\/import/.test(h) ? 'import' : null; };
   const vals = (k) => (G.Lab && G.Lab.vals && G.Lab.vals[k]) || {};
   const get = (k) => { try { return PYCODE[k](vals(k)); } catch (e) { return '# could not build the code: ' + e.message; } };
 

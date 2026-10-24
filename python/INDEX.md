@@ -1,6 +1,6 @@
 # Python code of the Risk Hub modules
 
-One standalone script per module (108), the same code as the app's "Python" button. Each runs on synthetic data with the module's default parameters; needs numpy, scipy, pandas (some also statsmodels, scikit-learn, arch).
+One standalone script per module (113), the same code as the app's "Python" button. Each runs on synthetic data with the module's default parameters; needs numpy, scipy, pandas (some also statsmodels, scikit-learn, arch).
 
 | Script | What it does |
 |---|---|
@@ -51,6 +51,7 @@ One standalone script per module (108), the same code as the app's "Python" butt
 | [`higham.py`](higham.py) | Nearest valid correlation matrix (Higham alternating projections) |
 | [`histscen.py`](histscen.py) | Historical stress episodes: the worst non-overlapping windows |
 | [`hrp.py`](hrp.py) | Equal weight, minimum variance, risk parity and Hierarchical Risk Parity |
+| [`import.py`](import.py) | Import: read a table pasted from Excel or a CSV file into daily returns |
 | [`irb.py`](irb.py) | Basel IRB risk-weight formula (corporate) |
 | [`irrbb.py`](irrbb.py) | Interest-rate risk in the banking book: delta EVE and delta NII |
 | [`jumps.py`](jumps.py) | Merton jump-diffusion: simulation and the option smile it creates |
@@ -63,6 +64,7 @@ One standalone script per module (108), the same code as the app's "Python" butt
 | [`ltvmig.py`](ltvmig.py) | Loan-to-value migration matrix from price history (CreditMetrics style) |
 | [`lvar.py`](lvar.py) | Liquidity-adjusted VaR: exit cost from the bid-ask spread and market depth |
 | [`margincall.py`](margincall.py) | Margin calls on a leveraged position: liquidation probability |
+| [`market.py`](market.py) | Market data: load a price CSV, compute returns and summary statistics |
 | [`mc.py`](mc.py) | Monte-Carlo paths under geometric Brownian motion |
 | [`mcconv.py`](mcconv.py) | Monte-Carlo VaR: how many simulations are enough? |
 | [`merton.py`](merton.py) | Merton structural model: asset value, asset volatility, distance to default, PD |
@@ -80,6 +82,7 @@ One standalone script per module (108), the same code as the app's "Python" butt
 | [`pd.py`](pd.py) | Probability of default, expected loss and hazard rate |
 | [`pdback.py`](pdback.py) | PD back-testing: binomial and traffic-light tests |
 | [`pla.py`](pla.py) | FRTB P&L attribution test: Spearman and Kolmogorov-Smirnov |
+| [`portfolio.py`](portfolio.py) | Portfolio: weights, daily portfolio returns, volatility and diversification |
 | [`proxy.py`](proxy.py) | Removing a sensitive variable does not remove its effect (proxy discrimination) |
 | [`qagile.py`](qagile.py) | Crypto-agility register: fund the migrations that cut expected loss most |
 | [`qday.py`](qday.py) | Q-Day as a tail event on a crypto book |
@@ -90,6 +93,8 @@ One standalone script per module (108), the same code as the app's "Python" butt
 | [`regimes.py`](regimes.py) | Two-regime Markov-switching model of returns (calm / stressed) |
 | [`reverse.py`](reverse.py) | Reverse stress test: the most plausible scenario that loses L |
 | [`riskbudget.py`](riskbudget.py) | Risk budgeting: contributions to portfolio volatility and VaR |
+| [`run_profile.py`](run_profile.py) | Risk profile: return distribution, volatility, drawdown |
+| [`run_stress.py`](run_stress.py) | Stress test: replay shocks on a portfolio |
 | [`run_var.py`](run_var.py) | VaR and Expected Shortfall: historical, parametric (normal), Monte-Carlo |
 | [`runoff.py`](runoff.py) | Deposit run-off, liquidity buffer survival and stable funding |
 | [`saccr.py`](saccr.py) | SA-CCR exposure at default (simplified, one netting set) |
