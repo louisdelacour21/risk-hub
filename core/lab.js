@@ -21,7 +21,7 @@ const Lab = (function () {
     for (const l of o.hlines || []) { g.strokeStyle = colour(l.c || 'm', col); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(pad.l, Y(l.y)); g.lineTo(W - pad.r, Y(l.y)); g.stroke(); g.setLineDash([]); if (l.t) { g.fillStyle = g.strokeStyle; g.textAlign = 'right'; g.fillText(l.t, W - pad.r - 2, Y(l.y) - 4); g.textAlign = 'left'; } }
     for (const l of o.vlines || []) { g.strokeStyle = colour(l.c || 'm', col); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(X(l.x), pad.t); g.lineTo(X(l.x), h - pad.b); g.stroke(); g.setLineDash([]); if (l.t) { g.fillStyle = g.strokeStyle; g.fillText(l.t, Math.min(X(l.x) + 4, W - 70), pad.t + 10); } }
     for (const s of o.series) {
-      const k = colour(s.c, col); g.strokeStyle = k; g.fillStyle = k; g.lineWidth = s.w || 1.8; g.globalAlpha = s.alpha ?? 1; g.setLineDash(s.dash || []);
+      const k = colour(s.c, col); g.strokeStyle = k; g.fillStyle = k; g.lineWidth = s.w || 1.8; g.globalAlpha = s.alpha ?? 1; g.setLineDash(Array.isArray(s.dash) ? s.dash : s.dash ? [5, 4] : []);
       if (s.bar) { const bw = Math.max(1, (W - pad.l - pad.r) / s.x.length * 0.85); s.x.forEach((x, i) => g.fillRect(X(x) - bw / 2, Y(Math.max(s.y[i], 0)), bw, Math.abs(Y(0) - Y(s.y[i])))); }
       else if (s.dots) { s.x.forEach((x, i) => { if (Number.isFinite(s.y[i])) { g.beginPath(); g.arc(X(x), Y(cl(s.y[i])), s.r || 2.6, 0, 7); g.fill(); } }); }
       else {

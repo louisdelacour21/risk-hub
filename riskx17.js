@@ -34,10 +34,10 @@
     return { pHit: hit / n, avgCalls: calls / n, avgCash: cash / n, worstCash: worst, n };
   }
   // Liquidity ladder: outflows[i] at bucket i against a buffer already net of haircut; returns the cumulative gap (buffer minus cumulative outflows) and the first breach.
-  function ladder(outflows, buffer) {
+  function bufferLadder(outflows, buffer) {
     let c = 0; const gap = outflows.map((o) => { c += o; return buffer - c; }); const i = gap.findIndex((g) => g < 0);
     return { gap, breach: i };
   }
-  Object.assign(X, { bookValue, bookGreeks, bookGrid, marginCalls, ladder });
+  Object.assign(X, { bookValue, bookGreeks, bookGrid, marginCalls, bufferLadder });
   if (typeof module !== 'undefined') module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

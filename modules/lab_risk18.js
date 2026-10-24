@@ -51,7 +51,7 @@ Lab.reg('fundwall', {
   async draw(v, out, ctx) {
     const { A, close } = await r18Px(ctx, 6), hs = [7, 30, 90, 180, 365], name = ['1 week', '1 month', '3 months', '6 months', '12 months'];
     const hc = hs.map((h) => { const r = []; for (let s = 0; s + h < close.length; s++) r.push(1 - close[s + h] / close[s]); r.sort((a, b) => b - a); const m = Math.max(1, Math.ceil(r.length * (1 - v.cf))); return Math.max(0, r.slice(0, m).reduce((t, x) => t + x, 0) / m); });
-    const o = [v.o1, v.o2, v.o3, v.o4, v.o5], L0 = Risk.x.ladder(o, v.buf), gap = o.map((_, i) => v.buf * (1 - hc[i]) - L0.gap.map((g) => v.buf - g)[i]), br = gap.findIndex((g) => g < 0);
+    const o = [v.o1, v.o2, v.o3, v.o4, v.o5], L0 = Risk.x.bufferLadder(o, v.buf), gap = o.map((_, i) => v.buf * (1 - hc[i]) - L0.gap.map((g) => v.buf - g)[i]), br = gap.findIndex((g) => g < 0);
     out.innerHTML = `<div class="kpis">${kpi('Survival at market value', L0.breach < 0 ? 'beyond 12 months' : name[L0.breach], 'first bucket with a negative gap')}${kpi('Survival after haircut', br < 0 ? 'beyond 12 months' : name[br], 'buffer shrunk by the ' + pct(v.cf, 0) + ' expected shortfall', br >= 0 ? 'bad' : 'ok')}${kpi('Haircut at 1 month', pct(hc[1], 0), 'expected shortfall of the asset')}${kpi('Haircut at 12 months', pct(hc[4], 0), 'few independent windows')}</div>
       ${Lab.table(['Horizon', 'Outflow', 'Cumulative outflow', 'Haircut', 'Gap at market value', 'Gap after haircut'], hs.map((_, i) => [name[i], o[i], o.slice(0, i + 1).reduce((a, b) => a + b, 0), pct(hc[i], 0), r18Fmt(L0.gap[i]), r18Fmt(gap[i])]))}
       ${Lab.card('c1', 'Gap between buffer and cumulative outflows', [['a', 'at market value'], ['r', 'after haircut']])}`;

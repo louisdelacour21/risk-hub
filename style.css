@@ -279,3 +279,14 @@ a.catcard:hover { border-color: var(--accent); transform: translateY(-2px); }
 .qopt:hover { background: var(--raised); } .qopt.ok { border-color: var(--green); } .qopt.no { border-color: var(--red); }
 .sheet h3 { margin: 18px 0 6px; font-size: 15px; } .sheet p, .sheet li { color: var(--muted); line-height: 1.6; } .sheet code { background: var(--raised); padding: 1px 6px; border-radius: 6px; color: var(--text); }
 @media print { .side, .top, .foot, .controls, .smin { display: none !important; } .shell { display: block; } .lab { display: block; } body { background: #fff; color: #000; } }
+
+/* Python code button and dialog */
+#pybtn { position: fixed; right: 18px; bottom: 18px; z-index: 40; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--shadow); }
+#pybtn:hover { border-color: var(--text); }
+#pydlg { width: min(860px, 94vw); max-height: 88vh; padding: 18px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); }
+#pydlg::backdrop { background: rgba(0, 0, 0, .5); }
+#pydlg .pyhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+#pydlg .pyhead span { display: flex; gap: 8px; }
+#pydlg button { padding: 7px 12px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+#pydlg pre { margin: 0 0 10px; padding: 14px; max-height: 60vh; overflow: auto; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre; }
+#pydlg small { color: var(--muted); }

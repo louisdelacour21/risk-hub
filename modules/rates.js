@@ -4,7 +4,7 @@ function curveChart(cv, tenors, series) {
   const c = setup(cv, 240), all = series.flatMap((s) => s.y), a = Math.min(...all), b = Math.max(...all), pad = (b - a) * 0.15 || 0.2;
   const { X, Y } = frame(c, a - pad, b + pad, (v) => v.toFixed(1) + '%', null, tenors.length), { g, col } = c;
   g.fillStyle = col('--muted'); g.font = '11px system-ui'; g.textAlign = 'center'; tenors.forEach((t, i) => g.fillText(t, X(i), 236)); g.textAlign = 'left';
-  series.forEach((s) => { g.strokeStyle = col(s.color); g.lineWidth = s.w; g.setLineDash(s.dash || []); g.beginPath(); s.y.forEach((v, i) => (i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)))); g.stroke(); g.setLineDash([]);
+  series.forEach((s) => { g.strokeStyle = col(s.color); g.lineWidth = s.w; g.setLineDash(Array.isArray(s.dash) ? s.dash : s.dash ? [5, 4] : []); g.beginPath(); s.y.forEach((v, i) => (i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)))); g.stroke(); g.setLineDash([]);
     g.fillStyle = col(s.color); s.y.forEach((v, i) => { g.beginPath(); g.arc(X(i), Y(v), 3, 0, 7); g.fill(); }); });
 }
 async function renderRates() {

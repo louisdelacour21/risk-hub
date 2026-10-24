@@ -133,6 +133,6 @@
     return s;
   }
 
-  Object.assign(Risk, { x: { poisson, gammaDraw, lda, mertonEq, merton, vasBond, swapXva, frtbEs, LHS, lcr, nsfr, LCR_OUT, LCR_IN, NSFR_ASF, NSFR_RSF, reverseStress, hrp, longOnly, irbRw, RATINGS, TRANS, cumPd, ecl, matMul } });
+  Object.assign(Risk, { x: { poisson, gammaDraw, lda, mertonEq, merton, vasBond, swapXva, frtbEs, LHS, lcr, nsfr, LCR_OUT, LCR_IN, NSFR_ASF, NSFR_RSF, reverseStress, hrp, longOnly, irbRw, RATINGS, TRANS, cumPd, eclCum: ecl, matMul } });
   if (typeof module !== 'undefined' && module.exports) module.exports = Risk;
 })(typeof window !== 'undefined' ? window : globalThis);

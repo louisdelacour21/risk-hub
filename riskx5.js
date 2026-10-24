@@ -26,9 +26,9 @@
   // weighted tail measures: losses with weights summing to 1, upper tail at confidence cf
   function weightedTail(L, W, cf) {
     const idx = L.map((_, i) => i).sort((a, b) => L[a] - L[b]); let c = 0, v = L[idx[idx.length - 1]];
-    for (const i of idx) { c += W[i]; if (c >= cf) { v = L[i]; break; } }
-    let es = 0, m = 0; for (const i of idx) if (L[i] >= v) { es += W[i] * L[i]; m += W[i]; }
-    return { var: v, es: es / m };
+    for (const i of idx) { c += W[i]; if (c >= cf - 1e-12) { v = L[i]; break; } }                 // tolerance: n equal weights of 1/n sum to cf only up to rounding
+    let es = 0; for (const i of idx) if (L[i] > v) es += W[i] * (L[i] - v);
+    return { var: v, es: v + es / (1 - cf) };                                                         // Rockafellar-Uryasev: exact tail mass 1 - cf even when an atom straddles the quantile
   }
   // mixture of the historical loss distribution (weight 1-p) and the same days with a Q-Day shock (weight p); a return r becomes (1+r)(1-J)-1
   function jumpMixture(r, p, J, cf) {
