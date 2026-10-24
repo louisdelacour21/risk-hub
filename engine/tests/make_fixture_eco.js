@@ -1,0 +1,22 @@
+// Writes fixture_eco.json from the JavaScript: inputs and the outputs engine/econometrics.py must reproduce.
+const fs = require('fs'), path = require('path'), R = require('../../econometrics.js'), E = R.eco;
+const out = {}, r = R.simulate(600);
+const b = r.map((x, i) => 0.5 * x + 0.3 * Math.sin(i / 7) * 0.01);
+const walk = []; let s = 0; r.forEach((x) => { s += x * 10; walk.push(s); });
+const walk2 = walk.map((v, i) => 0.7 * v + 2 * Math.sin(i / 5));
+const pct = r.map((x) => x * 100);
+out.r = r; out.b = b; out.walk = walk; out.walk2 = walk2; out.pct = pct;
+out.sp = { lg: [E.lgamma(0.3), E.lgamma(5.5), E.lgamma(20)], t: [E.tTwoSided(2.1, 12), E.tTwoSided(0.4, 3)], f: [E.fSf(3.2, 2, 40), E.fSf(0, 2, 5)], c: [E.chi2Sf(5.9, 3), E.chi2Sf(0.5, 4), E.chi2Sf(30, 6)] };
+const ols = E.ols(r.slice(5), [b.slice(5), r.slice(4, -1)], { allSe: true });
+out.ols = ols; out.olsHC = E.ols(r.slice(5), [b.slice(5)], { robust: 'hc1' }); out.olsHAC = E.ols(r.slice(5), [b.slice(5)], { robust: 'hac', nw: 4 }); out.olsNoInt = E.ols(r, [b], { intercept: false });
+out.bp = E.breuschPagan(ols, [b.slice(5), r.slice(4, -1)]);
+out.adf = [E.adf(walk), E.adf(r), E.adf(walk, { trend: 'ct', lags: 2 }), E.adf(walk, { trend: 'n', lags: 1 })];
+out.eg = E.engleGranger(walk2, [walk]);
+out.acf = E.acf(r, 8); out.pacf = E.pacf(r, 8);
+const af = E.arFit(pct, 2); out.arFit = af; out.arSel = E.arSelect(pct, 4); out.arFc = E.arForecast(pct, af, 5);
+out.arma = E.armaCss(pct.slice(0, 300), 1, 1);
+const gm = E.garchMle(pct.slice(0, 400)); out.garch = gm; out.garchFc = gm.forecast ? gm.forecast(5) : null; out.garchNic = gm.nic ? [-2, 0, 1.5].map((e) => gm.nic(e)) : null;
+const gj = E.garchMle(pct.slice(0, 400), { gjr: true }); out.gjr = gj; out.gjrNic = gj.nic ? [-2, 0, 1.5].map((e) => gj.nic(e)) : null;
+out.granger = E.granger(r, b, 2);
+fs.writeFileSync(path.join(__dirname, 'fixture_eco.json'), JSON.stringify(out, (k, v) => (typeof v === 'function' ? undefined : typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? '__nan__' : v > 0 ? '__inf__' : '__-inf__') : v)));
+console.log('fixture eco ok');
