@@ -134,7 +134,7 @@
       return { key, kind: c.kind, label: c.label, tenors, years, dates: rows.slice(1).map((r) => r[0]), rates, polNames: c.polNames, policy: { date: last[0], a: last[1], b: last[2] },
         zero: (i) => (c.kind === 'par' ? Risk.parToZero(years, rates[i]).map((x) => x * 100) : rates[i]) };   // continuously compounded zero rates in %
     };
-    api.simulated = () => [{ id: 'simA', name: 'Simulated asset A (fat tails)', class: 'Simulated', source: 'GARCH(1,1), Student-t 5 d.o.f.', kind: 'sim', seed: 20261023 }, { id: 'simB', name: 'Simulated asset B (fat tails)', class: 'Simulated', source: 'GARCH(1,1), Student-t 5 d.o.f.', kind: 'sim', seed: 7 }].map((a) => {
+    api.simulated = () => !Risk.simulate ? [] : [{ id: 'simA', name: 'Simulated asset A (fat tails)', class: 'Simulated', source: 'GARCH(1,1), Student-t 5 d.o.f.', kind: 'sim', seed: 20261023 }, { id: 'simB', name: 'Simulated asset B (fat tails)', class: 'Simulated', source: 'GARCH(1,1), Student-t 5 d.o.f.', kind: 'sim', seed: 7 }].map((a) => {
       const r = Risk.simulate(3000, a.seed); let v = 100; return { ...a, dates: null, close: [100, ...r.map((x) => (v *= 1 + x))], n: 3000 };
     });
   }
