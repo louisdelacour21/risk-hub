@@ -272,16 +272,45 @@ print("annualised vol, first and last forecast day:", vol[0] * np.sqrt(252), vol
   const vals = (k) => (G.Lab && G.Lab.vals && G.Lab.vals[k]) || {};
   const get = (k) => { try { return PYCODE[k](vals(k)); } catch (e) { return '# could not build the code: ' + e.message; } };
 
+  // Python engine on a free Hugging Face Space (sleeps when idle): woken in the background on the first visit, runs the code shown in the dialog.
+  const SERVER = 'https://louis-76530-risk-hub-python.hf.space';
+  let awake = null;
+  const wake = () => awake ||= fetch(SERVER + '/gradio_api/info', { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(r.status); return true; }).catch(() => { awake = null; return false; });
+  async function callEngine(code) {   // Gradio REST: POST starts the call, GET streams its result
+    const post = await fetch(SERVER + '/gradio_api/call/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [code] }) });
+    if (!post.ok) throw new Error('engine answered ' + post.status);
+    const { event_id } = await post.json();
+    const txt = await (await fetch(`${SERVER}/gradio_api/call/run/${event_id}`)).text();
+    const m = txt.match(/event: complete\s+data: (.*)/);
+    if (!m) throw new Error((txt.match(/event: error\s+data: (.*)/) || [, 'no result'])[1]);
+    return JSON.parse(m[1])[0];
+  }
+  async function runRemote(code, out) {
+    out.hidden = false; out.className = 'wait';
+    const t0 = Date.now(), tick = setInterval(() => { out.textContent = `Waking the Python engine… ${Math.round((Date.now() - t0) / 1000)} s (free server, up to a minute when idle)`; }, 500);
+    let up = false;
+    for (let i = 0; i < 9 && !up; i++) up = await Promise.race([wake(), new Promise((r) => setTimeout(() => r(false), 10000))]);
+    clearInterval(tick);
+    if (!up) { out.className = 'bad'; out.textContent = 'The Python engine is not answering. The calculations in the app itself still work; you can also copy this code and run it yourself.'; return; }
+    out.textContent = 'Running…';
+    try {
+      const j = await callEngine(code);
+      out.className = j.ok ? '' : 'bad'; out.textContent = (j.out || '') + (j.err ? '\n' + j.err : '') + (j.secs ? `\n[${j.secs} s on the server]` : '');
+    } catch (e) { out.className = 'bad'; out.textContent = 'Could not reach the engine: ' + e.message; }
+  }
+
   function init() {
     if (typeof document === 'undefined') return;
     const btn = document.createElement('button');
     btn.id = 'pybtn'; btn.type = 'button'; btn.textContent = 'Python'; btn.title = 'Show this calculation as Python code'; btn.hidden = true;
     const dlg = document.createElement('dialog'); dlg.id = 'pydlg';
-    dlg.innerHTML = '<div class="pyhead"><b id="pytitle"></b><span><button type="button" id="pycopy">Copy</button><button type="button" id="pydl">Download .py</button><button type="button" id="pyx" aria-label="Close">✕</button></span></div><pre id="pycode"></pre><small>Uses the slider values currently set. Educational code: check it against your own data before relying on it.</small>';
+    dlg.innerHTML = '<div class="pyhead"><b id="pytitle"></b><span><button type="button" id="pyrun">▶ Run in Python</button><button type="button" id="pycopy">Copy</button><button type="button" id="pydl">Download .py</button><button type="button" id="pyx" aria-label="Close">✕</button></span></div><pre id="pycode" contenteditable="plaintext-only" spellcheck="false"></pre><div id="pyout" hidden></div><small>Uses the slider values currently set. Educational code: check it against your own data before relying on it.</small>';
     document.body.append(btn, dlg);
-    const show = () => { const k = key(); $('#pytitle').textContent = 'Python · ' + k; $('#pycode').textContent = get(k); dlg.showModal(); };
+    const show = () => { $('#pyout').hidden = true; const k = key(); $('#pytitle').textContent = 'Python · ' + k; $('#pycode').textContent = get(k); dlg.showModal(); };
     const $ = (s) => dlg.querySelector(s);
     btn.addEventListener('click', show);
+    $('#pyrun').addEventListener('click', () => runRemote($('#pycode').textContent, $('#pyout')));
+    wake();
     $('#pyx').addEventListener('click', () => dlg.close());
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
     $('#pycopy').addEventListener('click', async (e) => { const b = e.target, t = $('#pycode').textContent; try { await navigator.clipboard.writeText(t); } catch (_) { const r = document.createRange(); r.selectNodeContents($('#pycode')); getSelection().removeAllRanges(); getSelection().addRange(r); document.execCommand('copy'); } b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1400); });

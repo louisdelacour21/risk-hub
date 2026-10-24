@@ -289,4 +289,7 @@ a.catcard:hover { border-color: var(--accent); transform: translateY(-2px); }
 #pydlg .pyhead span { display: flex; gap: 8px; }
 #pydlg button { padding: 7px 12px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
 #pydlg pre { margin: 0 0 10px; padding: 14px; max-height: 60vh; overflow: auto; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre; }
+#pydlg #pyout { margin: 0 0 10px; padding: 12px 14px; max-height: 30vh; overflow: auto; border-radius: 12px; border: 1px solid var(--border); font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+#pydlg #pyout.wait { color: var(--muted); }
+#pydlg #pyout.bad { border-color: #c0392b; }
 #pydlg small { color: var(--muted); }
