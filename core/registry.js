@@ -3,8 +3,8 @@
    route: the hash it opens; match: which hashes light it up; no route = "soon" (greyed, shows the roadmap). */
 const REGISTRY = {
   cats: [
-    { id: 'risk', title: 'Market risk', icon: '◢', blurb: 'VaR, Expected Shortfall, backtests, stress and reverse stress, FRTB, tails, regimes.' },
     { id: 'data', title: 'Data', icon: '▤', blurb: 'Build a portfolio, browse market data, import your own tables.' },
+    { id: 'risk', title: 'Market risk', icon: '◢', blurb: 'VaR, Expected Shortfall, backtests, stress and reverse stress, FRTB, tails, regimes.' },
     { id: 'credit', title: 'Credit risk', icon: '◇', blurb: 'PD / LGD, Merton, Vasicek, IRB and IFRS 9, rating migration, CDS, portfolio loss.' },
     { id: 'xva', title: 'Counterparty risk & XVA', icon: '⨯', blurb: 'Exposure profiles, netting, SA-CCR, CVA, DVA, FVA, KVA, wrong-way risk.' },
     { id: 'liq', title: 'Liquidity risk', icon: '≋', blurb: 'LCR, NSFR, liquidity-adjusted VaR, optimal liquidation.' },
@@ -21,7 +21,6 @@ const REGISTRY = {
     { id: 'sim', title: 'Scenario simulation', icon: '≈', blurb: 'Monte Carlo, jumps, stochastic volatility, mean reversion: the engines behind the risk numbers.' },
     { id: 'eco', title: 'Statistical foundations', icon: 'β', blurb: 'Regression diagnostics, unit roots, GARCH: the models risk measures rest on.' },
     { id: 'perf', title: 'Portfolio & factor risk', icon: '▲', blurb: 'Risk parity, hierarchical risk parity, beta and factor exposure.' },
-    { id: 'learn', title: 'Learn', icon: '?', blurb: 'Methodology, glossary, quiz, guided tour.' },
   ],
   mods: [
     { id: 'portfolio', cat: 'data', title: 'Portfolio', route: '#/', match: /^#\/?$/, about: 'Pick assets and weights' },
@@ -144,9 +143,6 @@ const REGISTRY = {
     { id: 'cusum', file: 'lab_risk7', cat: 'model', title: 'Parameter stability', about: 'CUSUM and Chow breaks' },
     { id: 'rcsa', file: 'lab_risk8', cat: 'op', title: 'Scenarios & RCSA', about: 'Expert scenarios aggregated with copulas' },
 
-    { id: 'method', cat: 'learn', title: 'Methodology', file: 'lab_learn', about: 'One sheet per formula' },
-    { id: 'quiz', cat: 'learn', title: 'FRM quiz', file: 'lab_learn', about: 'Live calculations' },
-    { id: 'tour', cat: 'learn', file: 'lab_learn', title: 'Why does VaR fail?', about: 'Step-by-step walkthrough' },
   ],
 };
 for (const m of REGISTRY.mods) if (m.file && !m.route) { m.route = '#/m/' + m.id; m.match = new RegExp('^#\/m\/' + m.id + '(\/|$)'); }
