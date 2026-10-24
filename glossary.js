@@ -1,0 +1,225 @@
+'use strict';
+/* Plain-English explanations shown next to every technical term (the small "i" buttons). Keep each entry short: what it is, how it is computed, how to read it. */
+const GLOSS = {
+  shapley: ["Shapley value", "Average marginal contribution of an input to a prediction over every order in which inputs can be added. The contributions add up exactly to the prediction minus the reference average."],
+  permimp: ["Permutation importance", "Fall in a score (here the AUC) when one input is shuffled, which breaks its link with the outcome. Correlated inputs share the credit, so each looks smaller than it is."],
+  psi: ["Population stability index", "Σ (current% − reference%)·ln(current%/reference%) over bins cut at the reference deciles. Below 0.10 stable, 0.10–0.25 watch, above 0.25 act."],
+  demparity: ["Demographic parity / 80% rule", "Approval rates should be alike across groups; the 80% rule asks that the lowest rate be at least 0.8 of the highest."],
+  eqopp: ["Equal opportunity", "Among people who would repay, the share approved should be the same in each group (equal true positive rates)."],
+  mosca: ["Mosca inequality", "Data is at risk if migration time X plus the time it must stay secret Y exceeds the time Z until a quantum machine can break the encryption."],
+  codedist: ["Surface-code distance", "Larger distance d suppresses logical errors as (p/p_th)^((d+1)/2) but costs about 2d² physical qubits per logical qubit."],
+  tailbeta: ["Tail beta", "Average return of an asset on the reference asset's worst days divided by the reference's return on those days: how much of a crash is passed on."],
+  blockboot: ["Block bootstrap", "Resamples blocks of consecutive days instead of single days, so volatility clustering and the way assets fall together survive in the simulated paths."],
+  modelres: ["Model risk reserve", "Expected shortfall of the loss caused by model error: value driven × adverse relative error, with the error spread growing with complexity and time since validation."],
+  euler: ["Euler allocation", "Splits a homogeneous risk measure into contributions w·∂risk/∂w that add up to the total. For ES, a position's contribution is its average loss on the portfolio's tail days."],
+  incvar: ["Incremental VaR", "VaR of the portfolio minus VaR without the position. A finite change, so incrementals do not add up; negative means the position is a hedge."],
+  svar: ["Stressed VaR", "VaR calibrated on the worst 12-month window in the history (Basel 2.5). Capital is charged on current plus stressed VaR."],
+  higham: ["Nearest correlation matrix", "Closest valid (positive semi-definite, unit diagonal) correlation matrix to an inconsistent one, found by Dykstra alternating projections (Higham 2002)."],
+  dcc: ["DCC-GARCH", "Two steps: remove each asset's volatility with a GARCH, then let the correlation of the standardised residuals follow Q = (1−a−b)Q̄ + a·zz′ + b·Q(t−1)."],
+  tickloss: ["Tick (quantile) loss", "Score for a quantile forecast: (p − 1{r < −VaR})·(r + VaR). Its expected value is smallest at the true quantile, so it ranks VaR models without relying on breach counts alone."],
+  dm: ["Diebold-Mariano test", "Tests whether two forecasts have the same average loss, using the daily loss differences and a Newey-West variance. Small p-value: the gap is unlikely to be luck."],
+  dcor: ["Distance correlation", "Dependence measure that is zero only if the variables are independent, so it detects non-linear links that Pearson misses."],
+  ledoitwolf: ["Ledoit-Wolf shrinkage", "Blends the noisy sample covariance with a simple target; the blending weight is estimated from the data to minimise expected error."],
+  cdar: ["CDaR", "Conditional drawdown at risk: average of the worst drawdowns beyond a quantile, the drawdown analogue of expected shortfall."],
+  almgren: ["Almgren-Chriss", "Optimal liquidation schedule trading off market-impact cost against price risk while selling; risk-averse sellers front-load."],
+  cds: ["CDS hazard rate", "Default intensity implied by CDS spreads: the constant rate h such that protection leg = spread × risky annuity. Survival = exp(−∫h). Rule of thumb: spread ≈ (1 − R)·h. Risk-neutral, so higher than historical default rates."],
+  crplus: ["CreditRisk+", "Actuarial credit model: defaults are Poisson with a common gamma factor, loss distribution computed exactly by the Panjer recursion over exposure bands. No simulation needed."],
+  saccr: ["SA-CCR", "Basel standardised approach for counterparty exposure: EAD = 1.4 × (replacement cost + multiplier × add-on). The add-on comes from supervisory duration, maturity buckets and netting correlations."],
+  kva: ["KVA", "Capital valuation adjustment: cost of the regulatory capital held against a trade over its life, at the shareholders' hurdle rate."],
+  mva: ["MVA", "Margin valuation adjustment: cost of funding the initial margin posted over the life of a trade."],
+  modelreserve: ["Model reserve", "Valuation buffer for model uncertainty, often sized as half the range of prices given by reasonable alternative models or parameters."],
+  digital: ["Digital option", "Pays a fixed amount if the underlying ends above the strike. Its price is minus the derivative of the call price with respect to strike, so it measures the smile directly."],
+  lda: ["Loss distribution approach (LDA)", "Operational-risk model: annual loss = sum of N loss events, N from a Poisson or negative-binomial law, each loss from a heavy-tailed severity (lognormal body, Pareto tail). Capital is the 99.9% quantile of the simulated annual loss."],
+  merton: ["Merton model / distance to default", "Equity is a call option on the firm assets with the debt as strike. Equity value and volatility give the asset value and volatility; the distance to default is how many asset standard deviations separate the firm from the debt level."],
+  irb: ["IRB approach", "Basel internal-ratings formula: capital K = LGD·N((N⁻¹(PD)+√ρ·N⁻¹(0.999))/√(1−ρ)) − PD·LGD, times a maturity adjustment. RWA = K × 12.5 × 1.06."],
+  ecl: ["Expected credit loss (IFRS 9)", "Stage 1 provisions the 12-month expected loss, stage 2 the lifetime loss after a significant increase in credit risk, stage 3 LGD·EAD on a defaulted loan. Scenario-weighted and forward-looking."],
+  wwr: ["Wrong-way risk", "Exposure to a counterparty rises exactly when its default probability rises. It increases CVA; right-way risk is the opposite."],
+  lcr: ["LCR / NSFR", "Liquidity coverage ratio: high-quality liquid assets over net 30-day stressed outflows, at least 100%. Net stable funding ratio: available over required stable funding for one year, at least 100%."],
+  lh: ["Liquidity horizon (FRTB)", "Days needed to exit or hedge a risk factor in stress (10, 20, 40, 60 or 120). Expected shortfall is rescaled bucket by bucket so illiquid factors weigh more."],
+  reversestress: ["Reverse stress test", "Starts from a loss that would threaten the firm and searches for the most plausible scenario that produces it, instead of applying a given scenario."],
+  hrp: ["Hierarchical risk parity", "López de Prado allocation: cluster assets on correlation distance, order them along the tree and split weight between halves in inverse proportion to their variance. No covariance inversion."],
+  adf: ['Augmented Dickey-Fuller test', 'Tests whether a series has a unit root (a random-walk component). H0: unit root. The statistic is compared with Dickey-Fuller critical values (about −2.86 at 5% with a constant), not Student ones. Failing to reject is weak evidence: the test has little power against slow mean reversion.'],
+  spurious: ['Spurious regression', 'Regressing one random walk on another, independent one gives a high R² and a "significant" slope far more often than 5% of the time, because the residuals are themselves non-stationary. Use returns (differences) or test for cointegration.'],
+  persist: ['Persistence (GARCH)', 'α + γ/2 + β: the share of the excess variance still present tomorrow. Near 1 means shocks fade slowly; the half-life is ln(½)/ln(persistence) days. At or above 1 the variance has no long-run level.'],
+  var: ['Value-at-Risk (VaR)', 'The loss that should be exceeded only (1 − confidence) of the time over one day. A 3% one-day VaR at 99% means: on 99 days out of 100 the loss should stay below 3%. It says nothing about how bad the remaining day can be: that is what Expected Shortfall adds.'],
+  es: ['Expected Shortfall (ES, also CVaR)', 'The average loss on the days when the loss is beyond the VaR: ES = E[loss | loss > VaR]. It is always larger than the VaR and describes how bad the bad days are. Basel now uses ES at 97.5% for market-risk capital.'],
+  conf: ['Confidence level', 'The share of days on which the loss should stay below the VaR. At 99% you expect a breach about once every 100 days; at 95%, once every 20.'],
+  window: ['Estimation window', 'How many past trading days feed each day\'s VaR. A short window reacts fast but is noisy; a long one is stable but slow to notice a change of regime.'],
+  backtest: ['Out-of-sample backtest', 'For every day t, the VaR is computed using only returns before t, then compared with the real return of day t. Nothing from the future is used, which is what a regulator checks.'],
+  historical: ['Historical simulation', 'Sorts the last N returns and reads the empirical quantile: the k-th worst, with k = ceil(N × (1 − confidence)). No distribution is assumed. ES is the average of the k worst days.'],
+  normal: ['Normal (variance-covariance)', 'Assumes bell-curve returns: VaR = −(μ + σ·z) with z = Φ⁻¹(1 − confidence) (−2.33 at 99%), and ES = −(μ − σ·φ(z)/(1 − confidence)). Simple, but it understates risk when returns have fat tails.'],
+  cornishFisher: ['Cornish-Fisher', 'Corrects the normal quantile for skewness S and excess kurtosis K: z′ = z + (z²−1)S/6 + (z³−3z)K/24 − (2z³−5z)S²/36. It captures fat tails without a full model, but the expansion can misbehave for extreme S and K.'],
+  ewmaMle: ['EWMA with fitted λ', 'Same recursion as RiskMetrics but λ is chosen on each window (0.90 to 0.99) by maximum Gaussian likelihood instead of being fixed at 0.94. Persistent markets get a high λ, jumpy ones a low λ.'],
+  garch: ['GARCH(1,1)', 'σ²ₜ = ω + α·r²ₜ₋₁ + β·σ²ₜ₋₁ with ω set by variance targeting; α and β are re-fitted on each window by a grid search of the Gaussian likelihood. Unlike EWMA, volatility is pulled back toward its long-run level. VaR is then normal with the one-day-ahead σ.'],
+  ageWeighted: ['Age-weighted historical simulation (BRW)', 'Each past day gets a weight λ^age (λ = 0.98) instead of 1/n, so recent days count more and old ones fade out gradually. VaR is the loss where the cumulated weight reaches 1 − confidence; ES is the weighted average of the losses beyond it.'],
+  volWeighted: ['Volatility-weighted historical simulation (Hull-White)', 'Each past return is rescaled by (today’s EWMA volatility ÷ the volatility of its own day), then plain historical simulation is applied. Calm-period returns are scaled up when today is turbulent, so VaR can exceed the worst loss ever seen.'],
+  fhs: ['Filtered historical simulation', 'Divide each past return by its GARCH volatility, keep the empirical quantile of these standardised residuals (fat tails preserved) and rescale by today’s volatility forecast. Combines the reactivity of GARCH with the realistic shape of historical simulation.'],
+  esratio: ['ES ratio', 'On the days the VaR was breached, the average of (actual loss ÷ ES forecast). Close to 1 means the ES forecast matches what really happens in the tail; above 1 means the ES was too low.'],
+  z2: ['ES test (Acerbi-Székely Z2)', 'Z2 = Σ loss·breach / ES / (N·p) − 1, zero if ES is right and positive if it is too low. The p-value is simulated under a Gaussian-tail reference, so it is approximate for fat-tailed models: read the ES ratio first. A low p (red) means the ES is too optimistic.'],
+  hz: ['Multi-day VaR', 'Loss not exceeded over h days. The √h rule multiplies the 1-day VaR by √h and assumes independent days with constant volatility. The overlapping-history column uses real h-day compounded returns; the GARCH simulation replays paths with volatility clustering. Basel uses 10 days at 99%.'],
+  ivvar: ['Implied-volatility VaR', 'VaR = σ_implied · z · √h, with σ taken from options (30-day ATM). It is forward-looking and market-based, but it is a risk-neutral price (usually above realised volatility) and normal-shaped. Deribit history comes from the DVOL index; for stocks the history only starts when the app was first refreshed.'],
+  compvar: ['Component VaR', 'Euler allocation of the portfolio VaR to each holding: weight × marginal VaR. The contributions add up to the total, so you see which positions drive the risk and which ones hedge it.'],
+  ewma: ['EWMA (RiskMetrics)', 'Exponentially weighted variance: σ²ₜ = 0.94·σ²ₜ₋₁ + 0.06·r²ₜ₋₁, mean set to zero, then a normal VaR. It reacts quickly to volatility but its effective memory is only about 16 days.'],
+  breach: ['Breach (exception)', 'A day whose actual loss is larger than the VaR forecast for that day. If the model is right, breaches happen with frequency 1 − confidence and are independent of each other.'],
+  rate: ['Observed breach rate', 'Breaches divided by backtest days. It should be close to 1 − confidence (1% at 99%). Much higher means the model understates risk; much lower means it is too conservative and ties up capital.'],
+  oosr2: ['Out-of-sample R²', 'One minus the model squared error on unseen data divided by the squared error of predicting the training mean. Zero means no better than the naive forecast; negative means worse. It is the honest measure of predictive power.'],
+  auc: ['AUC / Gini', 'Probability that a random defaulter gets a worse score than a random non-defaulter. 0.5 is a coin flip, 1 is perfect. Gini = 2 x AUC - 1.'],
+  kupiec: ['Kupiec test (proportion of failures)', 'Tests whether the breach rate equals 1 − confidence. LR = −2·ln[(1−p)^(N−x)·p^x] + 2·ln[(1−x/N)^(N−x)·(x/N)^x] for x breaches in N days, compared with a χ² law with 1 degree of freedom. A p-value below 0.05 rejects the model.'],
+  indep: ['Christoffersen independence test', 'Breaches should not cluster. The test compares the probability of a breach right after a breach with the probability after a calm day (a two-state Markov chain), against a χ² law with 1 degree of freedom. A p-value below 0.05 means clusters: the model reacts too slowly to turbulence.'],
+  cc: ['Conditional coverage', 'Kupiec and independence combined (LR = LR_uc + LR_ind, χ² with 2 degrees of freedom). A good VaR needs both the right number of breaches and no clustering.'],
+  basel: ['Basel traffic light', 'Uses the binomial probability of seeing at most x breaches if the model were exactly right: green below 95%, yellow from 95% to 99.99%, red above. For 250 days at 99% that is green for 0–4 breaches, yellow for 5–9, red for 10 or more. Supervisors add a capital surcharge in yellow and red.'],
+  annvol: ['Annualised volatility', 'Standard deviation of daily returns × √(observations per year). The number of observations per year is read from the dates: about 252 for stock markets, 365 for crypto, which trades every day.'],
+  annret: ['Annualised return', 'Arithmetic: mean daily return × observations per year. A quick approximation that ignores compounding; it can differ noticeably from the compound growth rate when volatility is high.'],
+  maxdd: ['Maximum drawdown', 'The largest fall of cumulative performance from a previous peak to the following trough. It is the worst loss someone who bought at the top and held through the period would have lived through.'],
+  kurt: ['Excess kurtosis', 'A measure of fat tails: 0 for a normal distribution. A value of 5 means extreme days are far more frequent than a bell curve predicts, which is why the normal VaR fails.'],
+  skew: ['Skewness', 'Asymmetry of returns. Negative skewness means the left tail (large losses) is longer than the right tail.'],
+  jb: ['Jarque-Bera normality test', 'JB = n/6 · (S² + K²/4), with S the skewness and K the excess kurtosis; under normal returns it follows a χ² law with 2 degrees of freedom. A small p-value means the returns are not normal.'],
+  rollvol: ['Rolling volatility', 'Annualised standard deviation over the last 60 days, recomputed every day. It shows volatility clustering: calm periods and turbulent periods follow each other.'],
+  hist: ['Return distribution', 'Bars: how often each daily return occurred. Red line: the normal curve with the same mean and standard deviation. Bars above the line at the centre and in the tails mean fat tails.'],
+  worstwin: ['Worst k-day window', 'The lowest compounded return over any k consecutive trading days in the history: (1+r₁)·(1+r₂)·…·(1+rₖ) − 1. It shows how losses build up over several days, which one-day VaR does not capture.'],
+  histscen: ['Historical scenario', 'A past episode replayed on the current portfolio: each asset’s price change between the two close dates, weighted by the current weights (buy and hold, no rebalancing). It says what this exact mix would have lost then. It is blank when an asset has no data covering the period.'],
+  optstress: ['Position stress', 'Reprices the option with Black-Scholes after a change in spot, volatility and time, and reports the P&L in money. The greek columns (delta, gamma, theta) are Taylor estimates of that same P&L: they are accurate for small moves and drift apart for large ones.'],
+  shock: ['Instant shock', 'A one-off percentage move applied to today\'s portfolio value: loss = value × shock. No history is involved; it answers "what if the market fell 20% tomorrow?".'],
+  stresscmp: ['VaR and ES in money', 'The one-day 99% VaR and ES computed on the last 750 days, converted with the portfolio value. The historical and normal numbers differ most when the tails are fat.'],
+  weights: ['Portfolio weights', 'Constant weights, rebalanced every day and normalised to 100%. Portfolio return = Σ wᵢ·rᵢ. Prices are first aligned on the dates all assets trade, so every return covers the same calendar interval.'],
+  zero: ['Zero rate', 'The yield of a zero-coupon bond to a given maturity. Cash flows are discounted one by one with continuous compounding: discount factor = exp(−r·t).'],
+  par: ['Par yield', 'The coupon rate at which a bond is worth exactly 100. The US Treasury publishes par yields. The site converts them into zero rates by bootstrapping: DF(T) = (1 − c·ΣDF(tᵢ)) / (1 + c), with c = par/2 (semi-annual coupons) and simple discounting for maturities up to 6 months.'],
+  svensson: ['Svensson curve', 'The ECB fits a smooth function of maturity (a Nelson-Siegel curve with an extra term) to prices of AAA-rated euro-area government bonds and publishes the resulting zero rates, continuously compounded.'],
+  df: ['Discount factor', 'Today\'s value of 1 currency unit received at time t: DF = exp(−r·t), with r the zero rate for that maturity (linear interpolation between published maturities, flat beyond the ends).'],
+  pv: ['Present value', 'PV = Σ cash flow × discount factor: what the schedule of future payments is worth today on the selected curve.'],
+  duration: ['Effective duration', 'Sensitivity of the price to a parallel move of the whole curve: −ΔPV / (PV·Δr), measured by bumping every rate by ±1 basis point. Roughly the average time to the cash flows, weighted by their present values.'],
+  bump: ['±100 bp scenario', 'Present value recomputed after adding (or subtracting) 1 percentage point to every zero rate. The percentage change is the interest-rate risk of the cash-flow schedule; the gain from a fall is larger than the loss from a rise because of convexity.'],
+  policy: ['Key rates', 'Central-bank rates. Euro area: main refinancing rate (MRO) and deposit facility. United States: EFFR (effective federal funds rate) and SOFR, the overnight secured rate.'],
+  sim: ['Simulated assets', 'Synthetic returns from a GARCH(1,1) model with Student-t shocks (5 degrees of freedom): σ²ₜ = ω + α·r²ₜ₋₁ + β·σ²ₜ₋₁. They have fat tails and volatility clusters and a known truth, so you can see how each method behaves. They are not market data.'],
+  value: ['Portfolio value', 'The amount the percentage losses are applied to, in the currency label you choose. The calculation is linear, so the percentages do not depend on it.'],
+  curvedate: ['Curve date', 'Pick any business day since 2006: the curve of that day is shown and used for discounting. Compare it with the curve of an earlier date to see how rates moved.'],
+  iv: ['Implied volatility', 'The volatility that, put into the Black-Scholes formula, gives the option’s market price. It is the market’s forecast of how much the underlying will move (annualised), read from prices instead of from history. Here: Deribit mark implied volatilities.'],
+  smile: ['Volatility smile / skew', 'Implied volatility plotted against strike for one expiry. Black-Scholes would give a flat line. A tilt (skew) shows what the market pays for protection: for crypto, calls and puts are both expensive in the wings, and the shape changes with the market mood.'],
+  termstruct: ['Term structure of volatility', 'At-the-money implied volatility for each expiry. Upward sloping: the market expects more movement later; downward sloping (inverted): stress now, calmer later.'],
+  atmiv: ['At-the-money volatility', 'Implied volatility at strike = forward price, interpolated between the quoted strikes. The standard single-number summary of an expiry.'],
+  skewkpi: ['Skew (90–110)', 'Implied volatility at 90% of the forward minus implied volatility at 110%. Positive: downside strikes cost more than upside strikes (fear of falls); negative: upside is richer (call demand).'],
+  forward: ['Forward price', 'The price of the future for that expiry, used as the underlying. Deribit gives its own future. Put-call parity, C − P = e^(−rT)(F − K), gives the forward implied by the chain when the exchange does not quote one. With the forward as the underlying, Black-Scholes becomes the Black-76 model used for the chain.'],
+  moneyness: ['Moneyness (K / F)', 'Strike divided by the forward price. 100% is at the money; below 100% puts are in the money, above 100% calls are.'],
+  bs: ['Black-Scholes-Merton', 'C = S·e^(−qT)·N(d1) − K·e^(−rT)·N(d2), P = K·e^(−rT)·N(−d2) − S·e^(−qT)·N(−d1), with d1 = [ln(S/K) + (r − q + σ²/2)T] / (σ√T) and d2 = d1 − σ√T. It assumes lognormal prices and constant volatility, which is why the smile exists.'],
+  delta: ['Delta', 'Change of the option price for a 1-unit move of the underlying: e^(−qT)·N(d1) for a call, −e^(−qT)·N(−d1) for a put. Also roughly the probability of finishing in the money, and the hedge ratio.'],
+  gamma: ['Gamma', 'Change of delta for a 1-unit move of the underlying: e^(−qT)·φ(d1) / (S·σ·√T). Largest at the money and close to expiry: that is where hedging is hardest.'],
+  vega: ['Vega', 'Change of the price for one volatility point (1%): S·e^(−qT)·φ(d1)·√T / 100. Always positive for the buyer of an option.'],
+  theta: ['Theta (per day)', 'Value lost in one calendar day if nothing else moves (time decay), shown per day. Negative for the option buyer.'],
+  rho: ['Rho (per 1%)', 'Change of the price for a 1 percentage point rise of the interest rate: K·T·e^(−rT)·N(d2) / 100 for a call. Small for short expiries.'],
+  parity: ['Put-call parity', 'C − P = S·e^(−qT) − K·e^(−rT) for European options on the same strike and expiry. It is a no-arbitrage identity, so it is used here as a check of the calculator.'],
+  spotS: ['Spot S', 'Current price of the underlying asset. Every option value is measured against it: a call is in the money when the spot is above the strike.'],
+  strikeK: ['Strike K', 'The price at which the option holder may buy (call) or sell (put) the underlying at expiry. Moneyness K/S tells how far in or out of the money the option is.'],
+  dte: ['Days to expiry', 'Calendar days until the option expires, converted to years as T = days / 365 in the formulas. Short expiries have large gamma and fast time decay.'],
+  sigma: ['Volatility σ', 'Annualised standard deviation of the underlying’s log returns assumed by Black-Scholes. It is the only input you cannot observe: the market quotes prices, and σ is what reproduces them (implied volatility).'],
+  rateR: ['Risk-free rate r', 'Continuously compounded rate used to discount the strike and to grow the forward. Here: the Treasury or ECB curve at the option’s maturity.'],
+  divq: ['Dividend yield q', 'Continuous yield paid by the underlying (dividends, or the funding/convenience yield for FX and crypto). The forward is F = S·e^((r−q)T); for Black-76 on a futures price, set q = r.'],
+  qty: ['Quantity', 'Number of option contracts in the position. Positive = long (you paid the premium), negative = short (you received it and carry the risk). Greeks and P&L scale linearly with it.'],
+  spotshock: ['Spot shocks', 'Instantaneous percentage moves of the underlying applied to the portfolio, e.g. −10% means the spot is multiplied by 0.90. Each cell of the grid is a different scenario.'],
+  volshock: ['Volatility shocks', 'Parallel shift of the implied volatility in points (+10 pts moves 40% to 50%) or in relative terms (+20% moves 40% to 48%). Options are long vega: a vol rise lifts their value.'],
+  daysel: ['Days elapsed', 'Time that passes in the scenario. Theta decay is applied for these days, so a position that looks safe today can lose value just by waiting.'],
+  episode: ['Historical episode', 'A real past period (crisis, crash, rally) replayed on today’s portfolio: each asset gets the return it actually had between the two dates and the weights are kept. It answers "what if that happened again?".'],
+  hurt: ['Hurt most', 'The holding contributing the largest loss in the scenario: weight × shock for each asset. It tells where to hedge first.'],
+  worstperiod: ['Worst windows in the data', 'The most severe rolling k-day losses actually observed on this portfolio. Useful as ready-made stress scenarios because they really happened.'],
+  measure: ['Measure', 'The risk statistic compared across methods (VaR and ES). Same data, same confidence level: only the model changes.'],
+  cashflows: ['Cash flows', 'List of (time in years, amount) payments. Present value = sum of amount × discount factor of its date; duration is the PV-weighted average date.'],
+  compare: ['Compare with', 'Overlays another date or curve on the yield curve to show how rates moved (parallel shift, steepening, inversion).'],
+  openint: ['Open interest', 'Number of option contracts still open on that strike. High open interest = liquid strike, so its implied volatility is more reliable.'],
+  underlying: ['Underlying', 'The asset the option is written on. The chain shown is a snapshot: one implied volatility per strike and expiry.'],
+  strikes: ['Strikes', 'Number of strike prices with a usable quote for the selected expiry. Fewer strikes means a rougher smile.'],
+  weight: ['Weight', 'Share of the portfolio value held in this asset. Weights are normalised to 100% and kept constant (daily rebalancing).'],
+  shockpct: ['Shock', 'The percentage move assumed for this asset in the scenario. Portfolio impact = sum of weight × shock.'],
+  impact: ['Impact', 'Weight × shock: the contribution of this asset to the portfolio return in the scenario. Multiply by the portfolio value to get a money loss.'],
+  method: ['Method', 'How the loss distribution is estimated: from past data directly (historical, weighted historical), from a fitted model (normal, EWMA, GARCH) or from a mix (filtered historical simulation).'],
+  series: ['Series', 'A price history bundled with the site or uploaded by you. Public series are refreshed by a script; your own series stay in your browser (IndexedDB) and are never uploaded.'],
+  period: ['Period', 'First and last date of the history and number of observations. VaR needs at least a few hundred days to be meaningful.'],
+  subadd: ['Subadditivity', 'A coherent risk measure never says the whole is riskier than the sum of its parts: ρ(A+B) ≤ ρ(A) + ρ(B). Expected Shortfall obeys it; VaR can break it for lumpy risks such as defaults, so diversifying can seem to raise VaR.'],
+  dnvar: ['Delta-normal VaR', 'Option P&L approximated by its delta alone: VaR = |Δ|·S·σ·z·√h. Exact for a linear position, but blind to gamma, so it can badly understate the risk of a short option.'],
+  dgvar: ['Delta-gamma VaR', 'Adds the second-order term ½Γ(ΔS)² to the delta approximation and reads the quantile of the resulting P&L. Captures curvature, still an approximation for large moves.'],
+  fullvar: ['Full revaluation VaR', 'Reprice the option with Black-Scholes at every simulated underlying move and take the quantile of the real P&L. The benchmark the two approximations are compared with.'],
+  durgap: ['Duration gap', 'DG = D(assets) − (L/A)·D(liabilities). Equity value moves by about −DG·A·Δy, so a positive gap loses economic value when rates rise (EVE).'],
+  repgap: ['Repricing gap', 'Assets minus liabilities that reprice within the bucket. Positive gap: net interest income rises when rates rise. It measures the earnings (NII) side, duration gap the value (EVE) side.'],
+  netfactor: ['Netting factor', 'Netted exposure divided by gross exposure. With n trades of correlation ρ it is about √(n + n(n−1)ρ)/n: 1 means no benefit, lower means more offset.'],
+  epe: ['EPE / EE / PFE', 'EE is the expected positive exposure at a date, EPE its average over the horizon, PFE a high quantile (e.g. 95%) of the exposure. EPE feeds CVA, PFE feeds limits.'],
+  bic: ['Business Indicator Component', 'Operational-risk base under the SMA: 12% of the business indicator up to 1bn, 15% from 1 to 30bn, 18% above.'],
+  ilm: ['Internal Loss Multiplier', 'ILM = ln(e − 1 + (LC/BIC)^0.8), where LC is 15 times the average annual loss. Above 1 when past losses are large relative to the business size. Capital = BIC × ILM.'],
+  fanmed: ['Fan chart quantiles', 'Percentiles of the simulated portfolio value at each date. The median is the typical path; the worst 5% is the level that is breached in 1 case out of 20.'],
+  rcnote: ['Reverse convertible', 'A note that pays a high fixed coupon and returns 100 unless the stock ends below the strike, in which case the client receives the stock (or its value). The client has sold a put; the coupon is its premium plus the bond yield. With a barrier, capital is lost only if the barrier is touched, and the coupon is lower.'],
+  twinwin: ['Twin-win', 'Pays the rise and, while a barrier has not been touched, also the fall in absolute value. Built as bond + call + down-and-out put − down-and-in put. After a touch the client simply holds the stock.'],
+  airbag: ['Airbag', 'A note that returns 100 down to the airbag level A and cushions the loss below it: the client receives x/A instead of x. Built by selling 1/A puts struck at A.'],
+  sharkfin: ['Shark fin', 'Pays a participation in the rise up to a knock-out level; once the stock touches it the upside disappears and only the protected capital remains (sometimes plus a rebate). Cheap upside, the price of which is the knock-out.'],
+  bonuscert: ['Bonus certificate', 'The stock plus a bonus: while the lower barrier is never touched the client receives at least the bonus level. After a touch it is simply the stock. A down-and-out put struck at the bonus pays for the floor.'],
+  discountcert: ['Discount certificate', 'The stock minus a call struck at the cap: the client buys below the market price and gives up everything above the cap.'],
+  memcoupon: ['Memory', 'A feature of a Phoenix: coupons missed while the stock was below the coupon barrier are paid at the next date it is above. It raises the value of the note, so the fair coupon is lower.'],
+  stepdown: ['Step-down', 'The autocall barrier falls on each observation date, so the note is easier to call as time goes by. It shortens the expected life and lowers the coupon the issuer can afford.'],
+  hiddenmargin: ['Hidden margin', 'The part of the price of 100 that is not worth anything in the legs: 100 minus the value of the bond and options at the advertised terms. It is the issuer’s profit, paid up front and recovered by the holder only at maturity.'],
+  touchopt: ['Touch option', 'A one-touch pays a fixed amount if the market touches a level before maturity; a no-touch pays if it never does; a double no-touch if it stays between two levels. The price is about the discounted probability of touching.'],
+  accumulator: ['Accumulator (KODA)', 'A contract to buy shares at every fixing at a strike below spot, with a knock-out above and leverage below the strike. Small bounded gains, large multiplied losses: the bank is long a put it sold for twice the quantity.'],
+  solved: ['Solved parameter', 'The free number of a structured note (coupon or participation) is solved from value = 100 − issuer margin. The value is linear in it, so two evaluations are enough.'],
+  cva: ['CVA / DVA', 'Credit valuation adjustment: (1 − R)·Σ EE·DF·default probability in each period, the expected loss from the counterparty defaulting while you are owed money. DVA is the mirror image with your own default and the exposure you owe.'],
+  fva: ['FVA', 'Funding valuation adjustment: the cost of funding the margin or hedges of uncollateralised trades, about the funding spread times the expected exposure over time. Its overlap with DVA is debated.'],
+  ivsolve: ['Implied-volatility solver', 'Finds σ such that the Black-Scholes price equals the price you type, by bisection (the price rises with volatility, so the search always converges). No answer if the price breaks the no-arbitrage bounds.'],
+};
+
+/** HTML for a small "i" button that explains a term; the text lives in GLOSS. */
+const tip = (key) => (GLOSS[key] ? `<button type="button" class="info" data-g="${key}" aria-label="What is: ${GLOSS[key][0]}?">i</button>` : '');
+
+(function popover() {
+  if (typeof document === 'undefined') return;
+  let pop = null, current = null;
+  const hide = () => { pop?.remove(); pop = null; current = null; };
+  function show(btn) {
+    if (current === btn) return;
+    hide(); current = btn;
+    const [title, text] = GLOSS[btn.dataset.g];
+    pop = document.createElement('div'); pop.className = 'pop'; pop.setAttribute('role', 'tooltip');
+    pop.innerHTML = `<b></b><span></span>`; pop.firstChild.textContent = title; pop.lastChild.textContent = text;
+    document.body.appendChild(pop);
+    const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+    pop.style.top = (r.bottom + 8 + h > innerHeight && r.top - h - 8 > 8 ? r.top - h - 8 : r.bottom + 8) + 'px';
+  }
+  document.addEventListener('mouseover', (e) => { const b = e.target.closest?.('.info'); if (b) show(b); });
+  document.addEventListener('mouseout', (e) => { if (e.target.closest?.('.info') && !e.relatedTarget?.closest?.('.info')) hide(); });
+  document.addEventListener('focusin', (e) => { const b = e.target.closest?.('.info'); if (b) show(b); });
+  document.addEventListener('focusout', hide);
+  document.addEventListener('click', (e) => { const b = e.target.closest?.('.info'); if (b) { e.preventDefault(); show(b); } else hide(); });   // a tap on touch screens shows the text; tapping anywhere else hides it
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+  addEventListener('scroll', hide, { passive: true });
+  addEventListener('hashchange', hide);
+})();
+
+/* Automatic "i" buttons: any table header, KPI label or panel title whose text matches a rule below gets the button, so a new label never ships unexplained. */
+const AUTO = [
+  [/^cva$|^dva$/, 'cva'], [/^fva$/, 'fva'], [/reverse convertible|^fair coupon$|coupon given up/, 'rcnote'], [/twin-win/, 'twinwin'], [/airbag/, 'airbag'], [/shark fin/, 'sharkfin'], [/bonus cert|^bonus$/, 'bonuscert'], [/discount cert/, 'discountcert'], [/phoenix|athena/, 'phoenix'], [/^memory/, 'memcoupon'], [/step-down/, 'stepdown'], [/^hidden margin$/, 'hiddenmargin'], [/one-touch|no-touch|^p\(touch\)|^p\(no touch\)/, 'touchopt'], [/accumulator|knocked out/, 'accumulator'], [/^participation$|fair annual coupon/, 'solved'],
+  [/^stand-alone var$/, 'var'], [/^var diversification|es of the pool/, 'subadd'], [/^delta-normal var/, 'dnvar'], [/^delta-gamma var/, 'dgvar'], [/^full revaluation var/, 'fullvar'],
+  [/^duration gap/, 'durgap'], [/^repricing gap/, 'repgap'], [/^netting factor/, 'netfactor'], [/^epe/, 'epe'], [/^bic$/, 'bic'], [/^ilm$|^sma capital/, 'ilm'],
+  [/^worst 5%|^median outcome|^average of the worst 5%/, 'fanmed'],
+  [/^1-day var|^var\b|^stand-alone var|var today/, 'var'], [/expected shortfall|^es\b|^es today|contribution to es/, 'es'], [/^es ratio/, 'esratio'], [/es test/, 'z2'],
+  [/kupiec/, 'kupiec'], [/indep/, 'indep'], [/cond\. cov/, 'cc'], [/^breaches/, 'breach'], [/basel zone/, 'basel'], [/^rate \(expected/, 'rate'],
+  [/annualised vol/, 'annvol'], [/annualised return/, 'annret'], [/max drawdown/, 'maxdd'], [/kurtosis/, 'kurt'], [/skewness/, 'skew'],
+  [/^√h rule|× √h|\bsimulation vs its own/, 'hz'], [/garch simulation/, 'fhs'], [/vol.*implied|implied.*vol|^iv$|^iv\b/, 'iv'],
+  [/contribution \(normal\)|contribution \(historical\)|stand-alone/, 'compvar'], 
+  [/^delta\b/, 'delta'], [/^gamma/, 'gamma'], [/^vega/, 'vega'], [/^theta/, 'theta'], [/^rho/, 'rho'], [/^price$/, 'bs'], [/^implied σ/, 'ivsolve'],
+  [/^spot$/, 'value'], [/atm volatility/, 'atmiv'], [/^skew \(/, 'skewkpi'], [/present value/, 'pv'], [/effective duration/, 'duration'], [/discount factor/, 'df'],
+  [/^\+100 bp|^−100 bp/, 'bump'], [/zero rate/, 'zero'], [/k\/f/, 'moneyness'], [/full repricing|delta only|delta \+ gamma/, 'optstress'],
+  [/worst .*day|worst \/ best/, 'worstwin'], [/overlapping history/, 'hist'], [/^shock/, 'shock'], [/loss on /, 'histscen'],
+  [/^spot s$/, 'spotS'], [/^strike k$/, 'strikeK'], [/days to expiry/, 'dte'], [/^volatility σ/, 'sigma'], [/^rate r/, 'rateR'], [/^dividend yield/, 'divq'], [/^quantity/, 'qty'],
+  [/^spot shocks/, 'spotshock'], [/^volatility shock/, 'volshock'], [/^days elapsed/, 'daysel'], [/^episode/, 'episode'], [/^hurt most/, 'hurt'], [/worst windows/, 'worstperiod'],
+  [/^measure$/, 'measure'], [/^cash flows?/, 'cashflows'], [/^compare with/, 'compare'], [/open interest/, 'openint'], [/^underlying/, 'underlying'], [/^strikes$/, 'strikes'],
+  [/^weight$/, 'weights'], [/^shock \(%\)/, 'shockpct'], [/^impact$/, 'impact'], [/^method( on the chart)?$/, 'method'], [/^series$/, 'series'], [/^period/, 'period'],
+  [/public series bundled|my series/, 'series'], [/value of 100/, 'value'],
+];
+(function autoTips() {
+  if (typeof document === 'undefined') return;
+  const norm = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+  function decorate(root) {
+    for (const el of root.querySelectorAll('th, .kpi > span, .lab-t, h2, h3')) {
+      if (el.querySelector('.info') || el.closest('.pop')) continue;
+      const t = norm(el.textContent), rule = AUTO.find(([re, k]) => re.test(t) && GLOSS[k]);
+      if (rule) el.insertAdjacentHTML('beforeend', tip(rule[1]));
+    }
+  }
+  let busy = false;
+  const mo = new MutationObserver(() => { if (busy) return; busy = true; Promise.resolve().then(() => { busy = false; decorate(document.body); }); });
+  document.addEventListener('DOMContentLoaded', () => { decorate(document.body); mo.observe(document.body, { childList: true, subtree: true }); });
+})();

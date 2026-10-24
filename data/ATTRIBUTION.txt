@@ -1,0 +1,2 @@
+Crypto daily candles (data/ohlcv and the crypto series in data/): Binance Vision, https://data.binance.vision, licensed CC BY-NC-SA 4.0. Non-commercial educational use; derived files are shared under the same licence. Not affiliated with or endorsed by Binance.
+Option chains and the DVOL index are not stored here: your browser fetches them from the Deribit public API.

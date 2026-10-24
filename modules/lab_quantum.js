@@ -1,0 +1,65 @@
+'use strict';
+/* Quantum risk: what it takes to break elliptic-curve keys, when, and what it does to a crypto book. Maths in riskx5.js (tested). */
+const qxSl = (id, label, min, max, step, val, fmt) => ({ id, label, min, max, step, val, fmt });
+const qxBook = [['btc', 'Bitcoin', 35], ['eth', 'Ether', 25], ['sol', 'Solana', 15], ['xrp', 'XRP', 10], ['ltc', 'Litecoin', 10], ['doge', 'Dogecoin', 5]];
+const qxBig = (x) => (x >= 1e9 ? (x / 1e9).toFixed(1) + ' billion' : x >= 1e6 ? (x / 1e6).toFixed(1) + ' million' : x >= 1e3 ? (x / 1e3).toFixed(0) + ' thousand' : x.toFixed(0));
+const qxTime = (s) => (s < 120 ? s.toFixed(0) + ' s' : s < 7200 ? (s / 60).toFixed(0) + ' min' : s < 172800 ? (s / 3600).toFixed(1) + ' h' : (s / 86400).toFixed(1) + ' days');
+const qxYear = (y) => (Number.isFinite(y) ? String(Math.round(y)) : 'never');
+
+Lab.reg('qshor', {
+  kicker: 'Quantum risk', title: 'Breaking a Bitcoin key: what the machine needs',
+  lead: 'A quantum computer running Shor’s algorithm can derive a private key from a public one. How big must it be? From the curve size and the quality of the hardware we compute logical qubits, gates, error-correcting code, physical qubits and running time, then the year a given hardware roadmap gets there.',
+  controls: [{ id: 'bits', label: 'Curve size', opts: [[256, 'ECC-256 (Bitcoin, Ethereum)'], [384, 'ECC-384'], [521, 'ECC-521']], val: 256 }, qxSl('lp', 'Physical error rate', -4, -2, 0.1, -3, (x) => (10 ** x * 100).toPrecision(2) + '%'), qxSl('cyc', 'Error-correction cycle (µs)', 0.1, 10, 0.1, 1, (x) => x.toFixed(1)),
+    { id: 'gain', label: 'Algorithmic progress on gate count', opts: [[1, 'None (2017 estimate)'], [10, 'Divided by 10'], [100, 'Divided by 100']], val: 1 }, qxSl('n0', 'Physical qubits today (thousands)', 0.1, 10, 0.1, 1, (x) => x.toFixed(1) + 'k'), qxSl('g', 'Yearly growth of qubit count', 1.1, 3, 0.05, 1.7, (x) => '×' + x.toFixed(2))],
+  note: 'Logical qubits ≈ 9n + 2·log₂n + 10 and Toffoli gates ≈ 448·n³·log₂n + 4090·n³ for an n-bit curve (Roetteler et al., 2017: about 2330 qubits and 1.3×10¹¹ gates for n = 256). Surface code with distance d: logical error per round <i>p<sub>L</sub> = 0.1·(p/p<sub>th</sub>)<sup>(d+1)/2</sup></i> with threshold 1%, about 2d² physical qubits per logical qubit; d is the smallest odd value that keeps the chance of any logical error during the whole run under 10%. Runtime = gates × d cycles (gates in series). <b>Order of magnitude, not a forecast:</b> better algorithms have since cut these numbers, which the “algorithmic progress” selector lets you test (it divides the gate count; logical qubits stay as they are), and the growth rate of hardware is an assumption the reader sets, not a measurement. This is a risk scale, not a cryptanalysis tool.',
+  draw(v, out) {
+    const X = Risk.x, t0 = 2026, p = 10 ** v.lp, s = X.shorEcc({ bits: v.bits, pPhys: p, cycleUs: v.cyc, gain: Number(v.gain) }), need = s.physical, N0 = v.n0 * 1000, yr = X.qdayYear(need, N0, t0, v.g);
+    const ps = Array.from({ length: 41 }, (_, i) => -4 + i * 0.05), curves = [256, 384, 521].map((b) => ps.map((q) => Math.log10(X.shorEcc({ bits: b, pPhys: 10 ** q }).physical)));
+    const xs = Array.from({ length: 31 }, (_, i) => t0 + i), hw = xs.map((y) => Math.log10(N0 * v.g ** (y - t0)));
+    out.innerHTML = `<div class="kpis">${kpi('Logical qubits', s.logical.toLocaleString('en'), `${qxBig(s.toffoli)} Toffoli gates`)}${kpi('Code distance', Number.isFinite(s.d) ? String(s.d) : '—', Number.isFinite(s.d) ? `${s.perLogical.toLocaleString('en')} physical per logical` : 'error rate above the threshold')}${kpi('Physical qubits', Number.isFinite(need) ? qxBig(need) : '—', `today ${qxBig(N0)}`)}${kpi('One key', Number.isFinite(s.seconds) ? qxTime(s.seconds) : '—', 'running time')}${kpi('Year it is reachable', qxYear(yr), yr - t0 > 30 ? 'beyond 30 years on this roadmap' : `in ${(yr - t0).toFixed(0)} years`)}</div>
+      ${Lab.card('c1', 'Physical qubits needed (log₁₀) against hardware error rate, three curve sizes', [['a', 'ECC-256'], ['y', 'ECC-384'], ['r', 'ECC-521']])}
+      ${Lab.card('c2', 'Your hardware roadmap (log₁₀ qubits) against the requirement', [['a', 'qubits available'], ['r', 'qubits needed']])}`;
+    later(() => {
+      Lab.plot($('#c1'), { series: [['a', 0], ['y', 1], ['r', 2]].map(([c, i]) => ({ x: ps, y: curves[i], c })), xfmt: (x) => (10 ** x * 100).toPrecision(1) + '%', yfmt: (y) => '10^' + y.toFixed(0), h: 200 });
+      Lab.plot($('#c2'), { series: [{ x: xs, y: hw, c: 'a', w: 2 }], hlines: Number.isFinite(need) ? [{ y: Math.log10(need), c: 'r' }] : [], xfmt: (x) => String(Math.round(x)), yfmt: (y) => '10^' + y.toFixed(0), h: 200 });
+    });
+  },
+});
+
+Lab.reg('qday', {
+  kicker: 'Quantum risk', title: 'Q-Day as a tail event on a crypto book',
+  lead: 'Nobody knows when keys will fall, but risk does not need the date: it needs a probability. We put a probability on Q-Day, assume the shock hits Bitcoin first, spread it to the other coins through the tail dependence measured in the data, and see how the book’s VaR and expected shortfall change.',
+  controls: [...qxBook.map(([id, nm, w]) => qxSl(id, nm + ' weight', 0, 100, 5, w, (x) => x + '%')), qxSl('med', 'Median time to Q-Day (years)', 3, 30, 1, 6, String), qxSl('sg', 'Uncertainty (log-sigma)', 0.2, 1.2, 0.05, 0.5, (x) => x.toFixed(2)), qxSl('yr', 'Year assessed: starts in … years', 0, 12, 1, 5, String),qxSl('J', 'Bitcoin loss on Q-Day', 20, 100, 5, 70, (x) => x + '%'), { id: 'cf', label: 'Confidence', opts: [[0.95, '95%'], [0.975, '97.5%'], [0.99, '99%']], val: 0.975 }, { id: 'drift', label: 'Average return', opts: [['zero', 'Removed (risk only)'], ['hist', 'Kept (history)']], val: 'zero' }],
+  note: 'Q-Day arrival is lognormal: <i>F(t) = P(Q-Day ≤ t) = Φ((ln t − ln median)/σ)</i>. The risk is measured over <b>one year</b>, the year that starts in the number of years you choose, with the probability that Q-Day falls in it given that it has not happened before: <i>(F(t+1) − F(t)) / (1 − F(t))</i>. A one-year horizon is deliberate: crypto volatility is so high that over three years the ordinary 97.5% loss is already close to 100% and no extra event can show. The book’s return over the year comes from 4 000 simulated buy-and-hold paths (365 days a year) made of random 20-day blocks of the real daily history, so every date keeps its cross-section (the coins fall together) and its volatility clustering. By default the sample’s average daily return is removed: crypto went up over the sample, and keeping that would make multi-year “losses” negative and the tail meaningless; switch it back to see the effect. Each path appears twice in the mixture: unchanged with weight 1−P, and hit by a shock with weight P, where an asset falls by <i>J<sub>i</sub> = min(1, β<sub>i</sub>·J)</i> and β<sub>i</sub> is its <b>tail beta</b> to Bitcoin (average return of the asset on Bitcoin’s worst 5% days divided by Bitcoin’s). VaR and ES are read on this weighted mixture. The loss size J and the date are assumptions the reader sets; the data only supplies the contagion and the ordinary distribution. Bootstrapped paths are independent but only as rich as the sample (about 7 years of days): extreme years are not invented, so read the <i>difference</i> between the two lines more than the level. Figures are losses; a negative loss is a gain.',
+  async draw(v, out) {
+    await new Promise((r) => setTimeout(r, 10)); const X = Risk.x, tot = qxBook.reduce((s, b) => s + (v[b[0]] || 0), 0); if (tot <= 0) throw new Error('Give at least one position a positive weight.');
+    const w = qxBook.map((b) => (v[b[0]] || 0) / tot), list = qxBook.map((b) => byId(b[0])); for (const a of list) await Data.ensure(a);
+    const pr = Data.portfolioReturns(list, list.map(() => 1 / list.length)), rs = pr.parts.map((p) => p.r), T = Math.min(...rs.map((r) => r.length)), R = rs.map((r) => r.slice(r.length - T)), L = 365;
+    if (T < 400) throw new Error(`Only ${T} common days of history.`);
+    const beta = R.map((r, i) => (i === 0 ? 1 : Math.max(0, X.tailBeta(R[0], r, 0.05)))), J = beta.map((b) => Math.min(1, b * v.J / 100));
+    const nw = 4000, win = X.bootWindows(R, L, nw, 20, 7, v.drift === 'zero'), base = win.map((x) => -x.reduce((s, y, i) => s + w[i] * y, 0)), shock = win.map((x) => -x.reduce((s, y, i) => s + w[i] * ((1 + y) * (1 - J[i]) - 1), 0));
+    const cf = Number(v.cf), risk = (med) => { const F = (t) => X.qdayProb(t, med, v.sg), P = (F(v.yr + 1) - F(v.yr)) / Math.max(1e-12, 1 - F(v.yr)); return { P, ...X.weightedTail([...base, ...shock], [...base.map(() => (1 - P) / nw), ...shock.map(() => P / nw)], cf) }; };
+    const hist = X.weightedTail(base, base.map(() => 1 / nw), cf), cur = risk(v.med), meds = Array.from({ length: 28 }, (_, i) => 3 + i), curve = meds.map((m) => risk(m).es);
+    out.innerHTML = `<div class="kpis">${kpi('P(Q-Day in the year, if not yet)', pct(cur.P, 1), `year ${v.yr + 1}, median ${v.med} y, σ ${v.sg}`)}${kpi('Book loss if it happens', pct(w.reduce((s, x, i) => s + x * J[i], 0), 0), 'weighted contagion')}${kpi('VaR ' + pct(cf, 1) + ': history → with Q-Day', pct(hist.var, 0) + ' → ' + pct(cur.var, 0), '1-year horizon')}${kpi('Expected shortfall', pct(hist.es, 0) + ' → ' + pct(cur.es, 0), 'ES moves more than VaR when P is small')}</div>
+      ${Lab.card('c1', 'Expected shortfall of the book against your median Q-Day date (dashed: without Q-Day)', [['r', 'ES with Q-Day']])}
+      ${Lab.table(['Asset', 'Weight', 'Tail beta to Bitcoin', 'Loss on Q-Day'], qxBook.map((b, i) => [b[1], pct(w[i], 0), i ? beta[i].toFixed(2) : '1 (reference)', pct(J[i], 0)]))}
+      <p class="muted">${nw} simulated one-year paths built from 20-day blocks of ${T} common days; ${v.drift === 'zero' ? 'average drift removed' : 'sample drift kept'}. Horizon figures are not annualised.</p>`;
+    later(() => Lab.plot($('#c1'), { series: [{ x: meds, y: curve, c: 'r', w: 2 }], hlines: [{ y: hist.es }], xfmt: (x) => x.toFixed(0) + ' y', yfmt: (y) => pct(y, 0), h: 220 }));
+  },
+});
+
+const qxRows = [['Bitcoin: move all funds to a new signature scheme (needs a fork)', 6, 0], ['Exchange and custody keys, already-exposed addresses', 3, 8], ['Stablecoin issuer, new chain with post-quantum signatures', 2, 5], ['Bank TLS traffic archived by an adversary today', 2, 10], ['Signed contracts and legal archives', 3, 25], ['Short-lived session data', 1, 0.1]];
+Lab.reg('qharvest', {
+  kicker: 'Quantum risk', title: 'Harvest now, decrypt later: the Mosca inequality',
+  lead: 'An attacker can record encrypted data today and open it when the machine exists. You are in danger if the time you need to migrate (X) plus the time the secret must last (Y) is longer than the time left before Q-Day (Z). We turn that inequality into a probability for each system.',
+  controls: [qxSl('med', 'Median time to Q-Day (years)', 3, 30, 1, 12, String), qxSl('sg', 'Uncertainty (log-sigma)', 0.2, 1.2, 0.05, 0.5, (x) => x.toFixed(2)), qxSl('spd', 'Migration speed (1 = as listed)', 0.25, 2, 0.05, 1, (x) => '×' + x.toFixed(2)), qxSl('ux', 'Your system: migration time X (years)', 0.5, 15, 0.5, 4, String), qxSl('uy', 'Your system: secrecy lifetime Y (years)', 0, 40, 0.5, 10, String)],
+  note: 'Risk for a system with migration time X and secrecy lifetime Y is <i>P(X + Y &gt; Z)</i> where the time to Q-Day Z is lognormal with the median and σ you choose: <i>P = Φ((ln(X+Y) − ln median)/σ)</i>. The slack is median − (X+Y): negative means the system is already late on the central scenario. The six listed systems use <b>illustrative</b> X and Y; the last row is yours: enter the real migration time and secrecy lifetime of any system with the two sliders (the speed slider divides the six listed X, not yours). Nothing here is a measured fact.',
+  draw(v, out) {
+    const X = Risk.x, rows = [...qxRows, ['Your system (set X and Y with the sliders)', v.ux * v.spd, v.uy]].map(([nm, x, y]) => { const xx = x / v.spd; return { nm, x: xx, y, ...X.mosca(xx, y, v.med, v.sg) }; });
+    const xs = Array.from({ length: 40 }, (_, i) => 0.5 + i * 0.5), worst = rows.reduce((a, b) => (b.p > a.p ? b : a));
+    out.innerHTML = `<div class="kpis">${kpi('Most exposed', worst.nm.split(/[:,]/)[0], 'P ' + pct(worst.p, 0))}${kpi('Systems already late', rows.filter((r) => r.slack < 0).length + ' / ' + rows.length, 'negative slack on the median date')}${kpi('Average probability', pct(Risk.mean(rows.map((r) => r.p)), 0), 'unweighted')}</div>
+      ${Lab.table(['System', 'Migration X (y)', 'Secrecy Y (y)', 'Slack (y)', 'P(X + Y > Z)'], rows.map((r) => [r.nm, r.x.toFixed(1), r.y.toFixed(1), `<b${r.slack < 0 ? ' class="fail"' : ''}>${r.slack.toFixed(1)}</b>`, pct(r.p, 0)]))}
+      ${Lab.card('c1', 'Probability of being too late against total time needed X + Y (the line is your median Q-Day)', [['a', 'P(X + Y > Z)']])}`;
+    later(() => Lab.plot($('#c1'), { series: [{ x: xs, y: xs.map((t) => X.qdayProb(t, v.med, v.sg)), c: 'a', w: 2 }], vlines: [{ x: v.med, c: 'r' }], xfmt: (x) => x.toFixed(0) + ' y', yfmt: (y) => pct(y, 0), h: 200 }));
+  },
+});

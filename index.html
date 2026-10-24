@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Risk Hub · Risk lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A market-risk lab that runs in your browser: VaR, Expected Shortfall and regulatory backtests on real market data, with every formula checked against scipy.">
+<meta property="og:title" content="Risk Hub · Risk lab">
+<meta property="og:description" content="VaR, Expected Shortfall, Kupiec, Christoffersen and Basel backtests on real market data. Runs entirely in your browser.">
+<meta name="theme-color" content="#0a0d12">
+<link rel="stylesheet" href="landing.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>Risk Hub</a>
+    <nav>
+      <a href="#analyses">Analyses</a><a href="#proof">Verification</a><a href="#data">Data</a>
+      <a class="act" href="app.html">Open the lab</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="hero-in">
+    <h1>Risk Hub</h1>
+    <p class="lead">A risk lab that runs in your browser: market, credit, counterparty (XVA), liquidity, funding, model, operational, correlation, interest-rate, currency and basis risk, from VaR backtests to FRTB, CVA, LCR and loss distributions. Every number is tested against an independent reference.</p>
+    <div class="cta">
+      <a class="btn" href="app.html">Open the lab</a>
+      <a class="btn ghost" href="#analyses">See what it does</a>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="analyses">
+  <div class="sec-in">
+    <h2>Eleven families of risk, one honest answer.</h2>
+    <div class="split">
+      <div class="col">
+        <p class="big">Every day, each model forecasts the loss it should not exceed. Risk Hub then checks the forecast against what really happened, using only the information available at the time.</p>
+        <p>Historical simulation, Normal, Cornish-Fisher and EWMA are backtested out of sample. Kupiec tests the number of breaches, Christoffersen tests whether they cluster, and the Basel traffic light turns the count into green, yellow or red.</p>
+      </div>
+      <ul class="list">
+        <li><b>Market risk</b><span>VaR and Expected Shortfall with out-of-sample backtests (Kupiec, Christoffersen, Basel zones), stressed VaR, FRTB, Euler contributions, EVT, stress and reverse stress.</span></li>
+        <li><b>Credit and counterparty</b><span>Merton and distance to default, Basel IRB and IFRS 9, rating migration, CDS, CreditRisk+, swap exposure, SA-CCR, CVA, DVA, FVA, KVA and wrong-way risk.</span></li>
+        <li><b>Liquidity and funding</b><span>LCR and NSFR under run-off stress, liquidity-adjusted VaR, optimal liquidation. Funding gap and survival horizon are next.</span></li>
+        <li><b>Model risk</b><span>Pricing models benchmarked against each other, estimation and method uncertainty on VaR, and the reserve they justify.</span></li>
+        <li><b>Operational risk</b><span>Loss distribution approach at 99.9% and the SMA capital, with heavy-tailed severities.</span></li>
+        <li><b>Correlation and dependence</b><span>DCC, tail copulas, Spearman, Kendall and distance correlation, Higham matrix repair and Ledoit-Wolf cleaning.</span></li>
+        <li><b>Rates, currency and basis</b><span>Yield curves, Nelson-Siegel, PCA, banking-book EVE and NII, minimum-variance hedge ratios. Currency VaR and the cross-currency and CDS-bond bases are on the roadmap.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec flat" id="proof">
+  <div class="sec-in">
+    <h2>Every formula is checked against scipy.</h2>
+    <div class="split rev">
+      <ul class="figs">
+        <li><strong>40+</strong><span>automated checks on the calculation engine</span></li>
+        <li><strong>5</strong><span>real bugs found and fixed by the audit</span></li>
+        <li><strong>0</strong><span>differences left against the scipy and numpy references</span></li>
+      </ul>
+      <div class="col">
+        <p class="big">The audit caught a rounding error that made the historical VaR too cautious, a skewness that used the wrong standard deviation, and a crypto volatility annualised on 252 days instead of 365.</p>
+        <p>The reference script recomputes the distributions, the four VaR methods, the coverage tests, Basel zones, drawdowns, the par-to-zero bootstrap and duration independently, and compares them with the code the site runs. Next to every technical term, a small <b>i</b> explains the formula and how to read the result.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="data">
+  <div class="sec-in">
+    <h2>Your data stays on your machine.</h2>
+    <div class="split">
+      <div class="col">
+        <p class="big">Calculations run in your browser and nothing is uploaded. Market data is stored locally, so using the lab never triggers an API call.</p>
+        <p>Drop in any CSV, or refresh from public sources with one button when the lab runs locally: ten crypto assets with daily open, high, low and volume from Binance Vision (CC BY-NC-SA, educational, not affiliated with Binance), euro FX from the ECB, the ECB and US Treasury yield curves, the VIX and the Fed overnight rates. Option chains and the DVOL index are never stored: your browser asks Deribit directly.</p>
+      </div>
+      <ul class="list">
+        <li><b>Ten crypto assets</b><span>Bitcoin, Ether and eight liquid altcoins, with open, high, low and volume, plus euro FX and the VIX.</span></li>
+        <li><b>Two yield curves</b><span>ECB AAA Svensson zero rates, and US Treasury par yields bootstrapped to zero rates.</span></li>
+        <li><b>Free and open</b><span>No account, no key, no tracking. The code is on GitHub.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="close">
+  <div class="close-in">
+    <h2>Start with an asset.</h2>
+    <a class="btn dark" href="app.html">Open the lab</a>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="foot-in">
+    <span>Built by <a href="https://www.linkedin.com/in/louis-delacour/" rel="noopener">Louis Delacour</a> · <a href="https://github.com/louisdelacour21" rel="noopener">GitHub</a></span>
+    <span>Simulated data is not market data · Not investment advice</span>
+  </div>
+</footer>
+
+<script src="risk.js"></script>
+<script src="landing.js"></script>
+</body>
+</html>
