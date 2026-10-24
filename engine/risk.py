@@ -289,3 +289,105 @@ def binom_cdf(N, p, x):                               # P(X <= x), log-space rec
 def basel_zone(N, x, p):                              # Basel "traffic light": thresholds at 95% and 99.99% of the binomial law
     c = binom_cdf(N, p, x)
     return "green" if c < 0.95 else "yellow" if c < 0.9999 else "red"
+
+
+# ---------- expected-shortfall backtest (Acerbi-Szekely Z2) ----------
+_z2_cache = {}
+
+
+def z2_null(N, p):                                    # Z2 simulated once under a Gaussian-tail reference
+    key = (N, p)
+    if key not in _z2_cache:
+        rnd = Mulberry32(987654321)
+        zp = norm_inv(1 - p)
+        esz = norm_pdf(zp) / p
+        out = []
+        for _ in range(1500):
+            s = 0.0
+            for _ in range(N):
+                u = rnd()
+                if u < p:
+                    s += norm_inv(1 - u) / esz
+            out.append(s / (N * p) - 1)
+        _z2_cache[key] = sorted(out)
+    return _z2_cache[key]
+
+
+def es_backtest(returns, bt, p):
+    N, s, nb = len(bt["t"]), 0.0, 0
+    for i in range(N):
+        if bt["hit"][i]:
+            s += -returns[bt["t"][i]] / bt["es"][i]; nb += 1
+    z2 = s / (N * p) - 1
+    null = z2_null(N, p)
+    return {"z2": z2, "p": sum(1 for x in null if x >= z2) / len(null), "nb": nb, "ratio": s / nb if nb else None}
+
+
+# ---------- multi-day horizon ----------
+def horizon_var(window, conf, h):                     # three ways to get an h-day VaR from daily data
+    base, sq = historical(window, conf), math.sqrt(h)
+    roll = []
+    for i in range(len(window) - h + 1):
+        g = 1.0
+        for j in range(i, i + h):
+            g *= 1 + window[j]
+        roll.append(g - 1)
+    hist = {**historical(roll, conf), "n": len(roll)} if len(roll) >= 100 else None
+    f = garch_fit(window)
+    omega = f["v0"] * (1 - f["a"] - f["b"])
+    rnd = Mulberry32(24681357)
+    paths, nz = [], len(f["z"])
+    for _ in range(20000):
+        v, g = f["next"], 1.0
+        for _ in range(h):
+            r = math.sqrt(v) * f["z"][int(rnd() * nz)]
+            g *= 1 + r
+            v = omega + f["a"] * r * r + f["b"] * v
+        paths.append(g - 1)
+    return {"sqrt": {"var": base["var"] * sq, "es": base["es"] * sq}, "hist": hist, "fhs": historical(paths, conf)}
+
+
+# ---------- implied-volatility VaR: sigma annualised, zero mean, normal quantile ----------
+def iv_var(sigma, days, conf, ppy=365):
+    return gauss_tail(sigma * math.sqrt(days / ppy), conf)
+
+
+def iv_backtest(returns, iv, conf, ppy):              # iv[i] = implied vol known before return i (None when missing)
+    out = {"t": [], "var": [], "es": [], "hit": []}
+    for i, x in enumerate(returns):
+        if iv[i] is not None and iv[i] > 0:
+            r = iv_var(iv[i], 1, conf, ppy)
+            out["t"].append(i); out["var"].append(r["var"]); out["es"].append(r["es"]); out["hit"].append(1 if x < -r["var"] else 0)
+    return out
+
+
+# ---------- component risk ----------
+def component_risk(parts, conf, win):                 # parts: [{"r": returns, "w": weight}]
+    n = min(win, *[len(x["r"]) for x in parts])
+    rs, w = [x["r"][-n:] for x in parts], [x["w"] for x in parts]
+    pr = [sum(w[i] * rs[i][t] for i in range(len(rs))) for t in range(n)]
+    order = sorted(range(n), key=lambda t: pr[t])
+    nt = max(1, math.ceil(n * (1 - conf) - 1e-9))
+    band = max(2, math.floor(0.025 * n + 0.5))        # JS Math.round: halves go up
+    kq = max(0, nt - 1)
+    lo, hi = max(0, kq - band), min(n - 1, kq + band)
+    band_days, tail_days = order[lo:hi + 1], order[:nt]
+    h = historical(pr, conf)
+    es = -mean([pr[t] for t in tail_days])
+    band_tot = -mean([pr[t] for t in band_days])
+    mu = [mean(a) for a in rs]
+    cov = [[sum((x - mu[i]) * (b[t] - mu[j]) for t, x in enumerate(a)) / (n - 1) for j, b in enumerate(rs)] for i, a in enumerate(rs)]
+    sw = [sum(c * w[j] for j, c in enumerate(row)) for row in cov]
+    sig = math.sqrt(sum(x * sw[i] for i, x in enumerate(w)))
+    z = norm_inv(conf)
+    items = []
+    for i in range(len(parts)):
+        items.append({
+            "w": w[i],
+            "hist": h["var"] * (-mean([w[i] * rs[i][t] for t in band_days])) / band_tot if band_tot > 0 else 0,
+            "histEs": -mean([w[i] * rs[i][t] for t in tail_days]),
+            "norm": z * w[i] * sw[i] / sig if sig > 0 else 0,
+            "vol": math.sqrt(cov[i][i]),
+            "alone": w[i] * historical(rs[i], conf)["var"]})
+    return {"n": n, "items": items, "hist": h["var"], "es": es, "norm": z * sig, "sigma": sig,
+            "corr": [[c / math.sqrt(cov[i][i] * cov[j][j]) for j, c in enumerate(row)] for i, row in enumerate(cov)]}
