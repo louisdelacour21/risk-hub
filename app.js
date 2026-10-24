@@ -57,6 +57,7 @@ addEventListener('resize', () => { clearTimeout(S.rz); S.rz = setTimeout(() => {
 
 (async function boot() {
   $('#app').innerHTML = '<div class="running"><span class="spin"></span><p>Starting Python…</p></div>';
+  await glossReady;
   const ok = await Py.ready;   // the maths is Python: nothing is drawn or simulated before it is in
   let bundled = { updated: '', series: [] }, user = [];
   try { bundled = await Data.loadBundled(); } catch { /* opened without a web server: the bundled series are missing, the user's own series still work */ }
